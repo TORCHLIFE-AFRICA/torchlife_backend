@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { DBx, PrismaService } from 'src/infrastructure/prisma/prisma.service';
 // import { IAuth } from '../../../auth/auth.interface';
 import * as bcrypt from 'bcryptjs';
@@ -18,58 +18,81 @@ export class AuthService implements IAuth {
         private readonly userService: UserService,
         private readonly jwtService: JwtService,
     ) {}
+
+    //signup user
     async signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<User, 'password' | 'id'> }> {
+        //hashing password and setting it to as the new password
         const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
         signUpDto.password = hashedPassword;
-        const user = await this.userService.createUser(signUpDto);
-        const tokenPayload: TokenPayload = { id: user.id };
-        const accessToken = this.jwtService.sign(tokenPayload, {
-            secret: this.configService.getOrThrow('JWT_SECRET'),
-            expiresIn: `${this.configService.getOrThrow('JWT_EXPIRATION')}ms`,
-        });
-        const expiresAt = new Date();
-        response.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            expires: expiresAt,
-            secure: this.configService.getOrThrow('NODE_ENV') === 'production',
-        });
-        const { id, ...result } = user;
-        return { data: result };
-    }
-    async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
-        const user = (await this.verifyUser(signInDto))?.data;
-        const expiresAt = new Date();
-        expiresAt.setMilliseconds(expiresAt.getTime() + parseInt(this.configService.getOrThrow('JWT_EXPIRATION')));
-        const tokenPayload: TokenPayload = { id: user.id };
-        const accessToken = this.jwtService.sign(tokenPayload, {
-            secret: this.configService.getOrThrow('JWT_SECRET'),
-            expiresIn: `${this.configService.getOrThrow('JWT_EXPIRATION')}ms`,
-        });
-        res.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            expires: expiresAt,
-            secure: this.configService.getOrThrow('NODE_ENV') === 'production',
-        });
-        return res.json({ data: accessToken });
-    }
-    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        const { email, password } = signInDto;
+        // saving the user in the database
         try {
-            const user = await this.userService.getUser(email);
-            if (!user) {
-                throw new Error('User not found');
-            }
+            const user = await this.userService.createUser(signUpDto);
+            // setting the access token and expiresAt, from the userID
+            const tokenPayload: TokenPayload = { id: user.id };
+            const accessToken = this.jwtService.sign(tokenPayload, {
+                secret: this.configService.getOrThrow('JWT_SECRET'),
+                expiresIn: `${this.configService.getOrThrow('JWT_EXPIRATION')}ms`,
+            });
+            const expiresInMs = Number(this.configService.getOrThrow('JWT_EXPIRATION'));
+            const expiresAt = new Date(Date.now() + expiresInMs);
+            //stores the cookie in the HTTP response
+            response.cookie('accessToken', accessToken, {
+                httpOnly: true,
+                expires: expiresAt,
+                secure: this.configService.getOrThrow('NODE_ENV') === 'production',
+            });
 
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                throw new Error('Invalid credentials');
-            }
-
-            return { data: user };
+            //returning the user data without the id
+            const { id, ...result } = user;
+            return { data: result };
         } catch (error) {
-            console.error(error);
+            console.error('Failed to create user', error);
+            throw new InternalServerErrorException('User creation failed.');
+        }
+    }
+
+    //signin user
+    async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
+        try {
+            //verifyinng and fetching the user
+            const user = (await this.verifyUser(signInDto)).data;
+            //assigning the token payload from the user ID
+            const tokenPayload: TokenPayload = { id: user.id };
+            //setting the access token and expiresAt, from the userID
+            const accessToken = this.jwtService.sign(tokenPayload, {
+                secret: this.configService.getOrThrow('JWT_SECRET'),
+                expiresIn: `${this.configService.getOrThrow('JWT_EXPIRATION')}ms`,
+            });
+            //expiration
+            const expiresAt = new Date(Date.now() + parseInt(this.configService.getOrThrow('JWT_EXPIRATION')));
+
+            res.cookie('accessToken', accessToken, {
+                httpOnly: true,
+                expires: expiresAt,
+                secure: this.configService.getOrThrow('NODE_ENV') === 'production',
+            });
+
+            return res.json({ data: accessToken });
+        } catch (error) {
+            console.error('Failed to sign in user', error);
             throw new UnauthorizedException('Invalid credentials');
         }
+    }
+    // verify user
+    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
+        const { email, password } = signInDto;
+
+        const user = await this.userService.getUser(email);
+        if (!user) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        return { data: user };
     }
 
     requestResetPassword(): Promise<{ msg: string }> {

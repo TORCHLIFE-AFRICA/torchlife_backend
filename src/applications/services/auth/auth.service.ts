@@ -65,13 +65,13 @@ export class AuthService implements IAuth {
             });
             //expiration
             const expiresAt = new Date(Date.now() + parseInt(this.configService.getOrThrow('JWT_EXPIRATION')));
-
+            //stores the cookie in the HTTP response
             res.cookie('accessToken', accessToken, {
                 httpOnly: true,
                 expires: expiresAt,
                 secure: this.configService.getOrThrow('NODE_ENV') === 'production',
             });
-
+            //returning the access token
             return res.json({ data: accessToken });
         } catch (error) {
             console.error('Failed to sign in user', error);
@@ -81,12 +81,12 @@ export class AuthService implements IAuth {
     // verify user
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
         const { email, password } = signInDto;
-
+        //fetching the user from the database
         const user = await this.userService.getUser(email);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
-
+        //comparing the password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             throw new UnauthorizedException('Invalid credentials');
@@ -98,10 +98,16 @@ export class AuthService implements IAuth {
     requestResetPassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
-    verifyRequestResetPassword(): Promise<{ msg: string }> {
+    async resetPassword(identifier: string, password: string): Promise<{ msg: string }> {
+        try {
+            const user = await this.userService.getUser(identifier);
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const updatedUser = await this.userService.updatePassword(user.id, hashedPassword);
+        } catch (error) {}
+
         throw new Error('Method not implemented.');
     }
-    updateResetPassword(): Promise<{ msg: string }> {
+    updatePassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
     changePassword(): Promise<{ msg: string }> {

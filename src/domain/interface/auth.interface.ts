@@ -7,7 +7,7 @@ export interface IAuth {
     signIn(signInDto: SignInDto, res: Response): Promise<Response>;
     verifyUser(signInDto: SignInDto): Promise<{ data: User }>;
     requestResetPassword(): Promise<{ msg: string }>;
-    verifyRequestResetPassword(): Promise<{ msg: string }>;
-    updateResetPassword(): Promise<{ msg: string }>;
+    resetPassword(identifier: string, password: string): Promise<{ msg: string }>;
+    updatePassword(): Promise<{ msg: string }>;
     changePassword(): Promise<{ msg: string }>;
 }

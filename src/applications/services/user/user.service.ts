@@ -8,31 +8,17 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 export class UserService {
     constructor(private readonly prismaDB: PrismaService) {}
 
-    // Get user by email
-    async getUser(email: string): Promise<User> {
+    // get user by email or id
+    async getUser(identifier: string): Promise<User> {
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
         const user = await this.prismaDB.user.findUnique({
-            where: {
-                email: email,
-            },
+            where: isEmail ? { email: identifier } : { id: identifier },
         });
         if (!user) {
             throw new NotFoundException('User not found');
         }
         return user;
-    }
-
-    // Get user by id
-    async getUserById(id: string): Promise<Omit<User, 'password'>> {
-        const user = await this.prismaDB.user.findUnique({
-            where: {
-                id: id,
-            },
-        });
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-        const { password, ...result } = user;
-        return result;
     }
 
     // create user
@@ -53,16 +39,23 @@ export class UserService {
         return result;
     }
 
-    // update user
-    async updateUser(id: string, user: User): Promise<Omit<User, 'password'>> {
-        const updatedUser = await this.prismaDB.user.update({
-            where: {
-                id: id,
-            },
-            data: user,
-        });
-        const { password, ...result } = updatedUser;
-        return result;
+    //Update password
+    async updatePassword(identifier: string, password: string): Promise<Omit<User, 'password'>> {
+        try {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
+            const updatedUser = await this.prismaDB.user.update({
+                where: isEmail ? { email: identifier } : { id: identifier },
+                data: {
+                    password: hashedPassword,
+                },
+            });
+            const result = updatedUser;
+            return result;
+        } catch (error) {
+            throw new NotFoundException('User not found');
+        }
     }
 
     // delete user

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { SignInDto, SignUpDto } from 'src/applications/dtos/auth.dto';
+import { SignUpDto } from 'src/auth/dto/auth.dto';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 @Injectable()
@@ -10,10 +10,10 @@ export class UserService {
 
     // get user by email or id
     async getUser(identifier: string): Promise<User> {
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-
-        const user = await this.prismaDB.user.findUnique({
-            where: isEmail ? { email: identifier } : { id: identifier },
+        const user = await this.prismaDB.user.findFirst({
+            where: {
+                OR: [{ email: identifier }, { id: identifier }],
+            },
         });
         if (!user) {
             throw new NotFoundException('User not found');
@@ -33,7 +33,7 @@ export class UserService {
         }
 
         const newUser = await this.prismaDB.user.create({
-            data: { ...user },
+            data: { ...user, isverified: false },
         });
         const { password, ...result } = newUser;
         return result;
@@ -43,16 +43,16 @@ export class UserService {
     async updatePassword(identifier: string, password: string): Promise<Omit<User, 'password'>> {
         try {
             const hashedPassword = await bcrypt.hash(password, 10);
-            const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+            const user = await this.getUser(identifier);
 
             const updatedUser = await this.prismaDB.user.update({
-                where: isEmail ? { email: identifier } : { id: identifier },
+                where: { id: user.id },
                 data: {
                     password: hashedPassword,
                 },
             });
-            const result = updatedUser;
-            return result;
+            const { password: _, ...userWithoutPassword } = updatedUser;
+            return userWithoutPassword;
         } catch (error) {
             throw new NotFoundException('User not found');
         }

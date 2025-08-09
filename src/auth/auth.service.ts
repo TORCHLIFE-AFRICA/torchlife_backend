@@ -1,11 +1,9 @@
 import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
-import { DBx, PrismaService } from 'src/infrastructure/prisma/prisma.service';
-// import { IAuth } from '../../../auth/auth.interface';
 import * as bcrypt from 'bcryptjs';
-import { SignInDto, SignUpDto } from '../../dtos/auth.dto';
+import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
 import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from 'src/applications/services/user/user.service';
+import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
@@ -51,10 +49,27 @@ export class AuthService implements IAuth {
         }
     }
 
+    // verify user
+    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
+        const { email, password } = signInDto;
+        //fetching the user from the database
+        const user = await this.userService.getUser(email);
+        if (!user) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+        //comparing the password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        return { data: user };
+    }
+
     //signin user
     async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
         try {
-            //verifyinng and fetching the user
+            //verifying and fetching the user, with Response.data
             const user = (await this.verifyUser(signInDto)).data;
             //assigning the token payload from the user ID
             const tokenPayload: TokenPayload = { id: user.id };
@@ -78,36 +93,49 @@ export class AuthService implements IAuth {
             throw new UnauthorizedException('Invalid credentials');
         }
     }
-    // verify user
-    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        const { email, password } = signInDto;
-        //fetching the user from the database
-        const user = await this.userService.getUser(email);
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-        //comparing the password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
 
-        return { data: user };
-    }
-
-    requestResetPassword(): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
-    }
-    async resetPassword(identifier: string, password: string): Promise<{ msg: string }> {
+    //reset password for signed in user
+    async updatePassword(resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
         try {
-            const user = await this.userService.getUser(identifier);
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const updatedUser = await this.userService.updatePassword(user.id, hashedPassword);
+            // verify user
+            const isUser = (
+                await this.verifyUser({
+                    email: resetPasswordDto.identifier,
+                    password: resetPasswordDto.oldPassword,
+                })
+            ).data.id;
+
+            //throw invalid credentiala for invalid user
+            if (!isUser) {
+                throw new UnauthorizedException('Invalid credentials');
+            }
+
+            //reset the password by updateing the user's password from the database
+            await this.userService.updatePassword(resetPasswordDto.identifier, resetPasswordDto.newPassword);
+            return { msg: 'Password reset successfully' };
         } catch (error) {}
 
         throw new Error('Method not implemented.');
     }
-    updatePassword(): Promise<{ msg: string }> {
+
+    async forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
+        try {
+            const isUser = (
+                await this.verifyUser({
+                    email: forgetPasswordDto.identifier,
+                    password: forgetPasswordDto.newPassword,
+                })
+            ).data.id;
+            if (!isUser) {
+                throw new UnauthorizedException('Invalid credentials');
+            }
+            const updatedUser = await this.userService.updatePassword(
+                forgetPasswordDto.identifier,
+                forgetPasswordDto.newPassword,
+            );
+            return { msg: 'Password reset successfully' };
+        } catch (error) {}
+
         throw new Error('Method not implemented.');
     }
     changePassword(): Promise<{ msg: string }> {

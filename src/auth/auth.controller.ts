@@ -1,10 +1,10 @@
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
-import { AuthService } from '../../applications/services/auth/auth.service';
 // import { IAuth } from '../../auth/auth.interface';
-import { SignInDto, SignUpDto } from '../../applications/dtos/auth.dto';
+import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
 import { User } from '@prisma/client';
 import { Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';
+import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController implements IAuth {
@@ -28,10 +28,10 @@ export class AuthController implements IAuth {
     requestResetPassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
-    verifyRequestResetPassword(): Promise<{ msg: string }> {
+    forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
-    updateResetPassword(): Promise<{ msg: string }> {
+    updatePassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
     changePassword(): Promise<{ msg: string }> {

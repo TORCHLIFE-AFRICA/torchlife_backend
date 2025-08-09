@@ -30,6 +30,7 @@ model User {
   first_name   String
   last_name    String
   password     String
+  isverified   Boolean
   email        String           @unique()
   phone_number String           @unique()
   role         USER_ROLES?      @default(USER)

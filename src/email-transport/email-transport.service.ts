@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import { join } from 'path';
 import { Transporter } from 'nodemailer';
+import { SendEmailDto } from './dto/email.dto';
 
 @Injectable()
 export class EmailTransportService {
@@ -13,23 +16,31 @@ export class EmailTransportService {
         this.configService = configService;
         //calling the transporter from nodemailer to send emails with the mail creds
         this.transporter = nodemailer.createTransport({
-            host: this.configService.getOrThrow('MAIL_HOST'),
-            port: Number(this.configService.getOrThrow('MAIL_PORT')) || 587,
-            secure: this.configService.getOrThrow('MAIL_SECURE') === 'true',
+            host: this.configService.getOrThrow('EMAIL_HOST'),
+            port: Number(this.configService.getOrThrow('EMAIL_PORT')) || 587,
+            secure: this.configService.getOrThrow('EMAIL_SECURE') === 'true',
             auth: {
-                user: this.configService.getOrThrow('MAIL_USER'),
-                pass: this.configService.getOrThrow('MAIL_PASS'),
+                user: this.configService.getOrThrow('EMAIL_USER'),
+                pass: this.configService.getOrThrow('EMAIL_PASSWORD'),
             },
         });
     }
 
-    async sendMail(to: string, subject: string, html: string) {
+    async sendMail(sendEmailDto: SendEmailDto) {
+        const isDev = process.env.NODE_ENV !== 'production';
+
+        const templatePath = isDev
+            ? join(__dirname, '..', 'email-templates', 'welcome.html') // during dev
+            : join(__dirname, '..', '..', 'email-templates', sendEmailDto.templateName); // in dist
+        const templateContent = fs.readFileSync(templatePath, 'utf-8');
         try {
             const info = await this.transporter.sendMail({
-                from: this.configService.getOrThrow('MAIL_FROM'),
-                to,
-                subject,
-                html,
+                from: this.configService.getOrThrow('EMAIL_SENDER'),
+                to: sendEmailDto.to,
+                subject: sendEmailDto.subject,
+                html: templateContent
+                    .replace('{{content}}', sendEmailDto.content)
+                    .replace('{{name}}', sendEmailDto.name),
             });
             this.logger.log(`Email sent: ${info.messageId}`);
             return info;

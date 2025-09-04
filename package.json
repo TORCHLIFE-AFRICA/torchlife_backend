@@ -6,7 +6,6 @@
     "private": true,
     "license": "UNLICENSED",
     "scripts": {
-        "build": "nest build",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start": "nest start",
         "start:dev": "kill -9 $(lsof -ti :8080); nest start --watch",
@@ -22,7 +21,9 @@
         "migrate:run": "prisma migrate deploy",
         "migrate:create": "prisma migrate dev --create-only",
         "migrate:load": "prisma migrate dev",
-        "migrate:dev": "prisma migrate dev --name init"
+        "migrate:dev": "prisma migrate dev --name init",
+        "build": "nest build && npm run copy:templates",
+        "copy:templates": "cp -r src/email-templates dist/email-templates"
     },
     "dependencies": {
         "@nestjs/common": "^11.1.1",
@@ -32,6 +33,7 @@
         "@nestjs/mapped-types": "*",
         "@nestjs/passport": "^11.0.5",
         "@nestjs/platform-express": "^11.0.1",
+        "@nestjs/swagger": "^11.2.0",
         "@prisma/client": "^6.8.2",
         "@types/bcrypt": "^5.0.2",
         "@types/passport": "^1.0.17",
@@ -44,7 +46,8 @@
         "passport-jwt": "^4.0.1",
         "passport-local": "^1.0.0",
         "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.1"
+        "rxjs": "^7.8.1",
+        "swagger-ui-express": "^5.0.1"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.2.0",

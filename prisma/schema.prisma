@@ -22,6 +22,7 @@ enum USER_ACTIVITIES {
 
 enum USER_ROLES {
   ADMIN
+  SUPER_ADMIN
   USER
 }
 

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { User } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
-import { SignUpDto } from 'src/auth/dto/auth.dto';
+import * as bcrypt from 'bcryptjs';
+import { SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class UserService {
     async getUser(identifier: string): Promise<User> {
         const user = await this.prismaDB.user.findFirst({
             where: {
-                OR: [{ email: identifier }, { id: identifier }],
+                OR: [{ email: identifier }, { id: identifier }, { phone_number: identifier }],
             },
         });
         if (!user) {
@@ -23,6 +23,7 @@ export class UserService {
 
     // create user
     async createUser(user: SignUpDto): Promise<Omit<User, 'password'>> {
+        //verify if user already exists
         const existing = await this.prismaDB.user.findUnique({
             where: {
                 email: user.email,
@@ -33,7 +34,14 @@ export class UserService {
         }
 
         const newUser = await this.prismaDB.user.create({
-            data: { ...user, isverified: false },
+            data: {
+                email: user.email,
+                password: user.password,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                phone_number: user.phone_number || '',
+                isverified: false,
+            },
         });
         const { password, ...result } = newUser;
         return result;

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
 import { IAuth } from 'src/domain/interface/auth.interface';
+import { EmailTransportService } from 'src/email-transport/email-transport.service';
 
 @Injectable()
 export class AuthService implements IAuth {
@@ -15,6 +16,7 @@ export class AuthService implements IAuth {
         private readonly configService: ConfigService,
         private readonly userService: UserService,
         private readonly jwtService: JwtService,
+        private readonly emailTransportService: EmailTransportService,
     ) {}
 
     //signup user
@@ -40,6 +42,19 @@ export class AuthService implements IAuth {
                 secure: this.configService.getOrThrow('NODE_ENV') === 'production',
             });
 
+            this.emailTransportService
+                .sendMail({
+                    to: user.email,
+                    subject: 'Welcome to our service!',
+                    name: user.first_name,
+                    content: "Thanks for signing up! We're glad to have you.",
+                    templateName: 'welcome',
+                })
+                .catch((error) => {
+                    console.error('Failed to send welcome email:', error);
+                    // Don't throw — we don't want to fail signup because of email
+                });
+
             //returning the user data without the id
             const { id, ...result } = user;
             return { data: result };
@@ -51,9 +66,9 @@ export class AuthService implements IAuth {
 
     // verify user
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        const { email, password } = signInDto;
+        const { identifier, password } = signInDto;
         //fetching the user from the database
-        const user = await this.userService.getUser(email);
+        const user = await this.userService.getUser(identifier);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
@@ -100,7 +115,7 @@ export class AuthService implements IAuth {
             // verify user
             const isUser = (
                 await this.verifyUser({
-                    email: resetPasswordDto.identifier,
+                    identifier: resetPasswordDto.identifier,
                     password: resetPasswordDto.oldPassword,
                 })
             ).data.id;
@@ -122,7 +137,7 @@ export class AuthService implements IAuth {
         try {
             const isUser = (
                 await this.verifyUser({
-                    email: forgetPasswordDto.identifier,
+                    identifier: forgetPasswordDto.identifier,
                     password: forgetPasswordDto.newPassword,
                 })
             ).data.id;

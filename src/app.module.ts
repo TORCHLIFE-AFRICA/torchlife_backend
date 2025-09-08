@@ -8,9 +8,10 @@ import { UserModule } from './user/user.module';
 import { PaymentsModule } from './payments/payments.module';
 // import { ConversionService } from './currency/conversion/conversion.service';
 import { EmailTransportService } from './email-transport/email-transport.service';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
-    imports: [PrismaModule, AuthModule, ConfigModule.forRoot({ isGlobal: true }), UserModule, PaymentsModule],
+    imports: [PrismaModule, AuthModule, ConfigModule.forRoot({ isGlobal: true }), UserModule, PaymentsModule, UploadModule],
     controllers: [AppController],
     providers: [AppService, EmailTransportService],
 })

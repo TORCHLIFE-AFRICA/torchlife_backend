@@ -43,11 +43,32 @@ model User {
   //
   donations    Donation[]
   payment      Payment[]
-  wallet       Wallet[]
+  wallet       Wallet?
   campaigns    Campaign[]
   ratings      Rating[]
+  fileUploads  FileUpload[]
 
   @@map("users")
+}
+
+model FileUpload {
+  id           String   @id @default(uuid()) @db.Uuid()
+  publicId     String   @unique
+  url          String
+  format       String
+  resourceType String
+  sizeInBytes  Int
+  originalName String
+  uploadedAt   DateTime @default(now())
+
+  // ✅ Relations
+  userId String? @db.Uuid()
+  user   User?   @relation(fields: [userId], references: [id])
+
+  campaignId String   @db.Uuid()
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  @@map("file_uploads")
 }
 
 enum DONATION_STATUS {
@@ -92,15 +113,18 @@ model Campaign {
   deadline      DateTime
   target_amount Int
   amount_raised Int
+
   //
-  created_at    DateTime        @default(now())
-  updated_at    DateTime        @updatedAt
-  deleted_at    DateTime?
+  fileUploads FileUpload[]
   //
-  user_id       String          @db.Uuid()
-  user          User            @relation(fields: [user_id], references: [id])
-  donations     Donation[]
-  ratings       Rating[]
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  deleted_at  DateTime?
+  //
+  user_id     String       @db.Uuid()
+  user        User         @relation(fields: [user_id], references: [id])
+  donations   Donation[]
+  ratings     Rating[]
 
   @@map("campaigns")
 }
@@ -142,7 +166,7 @@ model Wallet {
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
   //
-  user_id    String    @db.Uuid()
+  user_id    String    @unique @db.Uuid()
   user       User      @relation(fields: [user_id], references: [id])
 
   @@map("wallets")

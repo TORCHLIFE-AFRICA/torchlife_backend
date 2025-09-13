@@ -3,7 +3,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { UploadApiResponse, v2 as Cloudinary } from 'cloudinary';
 import { CLOUDINARY } from './providers/cloudinary.provider';
-import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UploadService {

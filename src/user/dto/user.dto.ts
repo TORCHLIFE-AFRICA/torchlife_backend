@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsStrongPassword } from 'class-validator';
+import { USER_ROLES } from '@prisma/client';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsStrongPassword } from 'class-validator';
+
+const { PROXY, USER } = USER_ROLES;
+type UserRole = typeof PROXY | typeof USER;
 
 export class UserDto {
     @ApiProperty({ example: 'user@example.com' })
@@ -30,5 +34,10 @@ export class UserDto {
     @IsOptional()
     @IsString()
     @IsNotEmpty()
-    phone_number?: string;
+    phone_number: string;
+
+    @ApiProperty({ example: [PROXY, USER] })
+    @IsOptional()
+    @IsEnum([PROXY, USER])
+    role: UserRole;
 }

@@ -24,6 +24,7 @@ enum USER_ROLES {
   ADMIN
   SUPER_ADMIN
   USER
+  PROXY
 }
 
 model User {
@@ -113,6 +114,13 @@ model Campaign {
   deadline      DateTime
   target_amount Int
   amount_raised Int
+  type          USER_ROLES      @default(USER)
+  //
+  proxyName     String?
+  proxyPhone    String?
+  proxyEmail    String?
+  proxyAddress  String?
+  proxyNote     String?
 
   //
   fileUploads FileUpload[]

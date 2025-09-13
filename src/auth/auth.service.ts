@@ -102,7 +102,11 @@ export class AuthService implements IAuth {
                 secure: this.configService.getOrThrow('NODE_ENV') === 'production',
             });
             //returning the access token
-            return res.json({ data: accessToken });
+            return res.json({
+                accessToken,
+                tokenType: 'Bearer',
+                expiresAt,
+            });
         } catch (error) {
             console.error('Failed to sign in user', error);
             throw new UnauthorizedException('Invalid credentials');

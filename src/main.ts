@@ -11,7 +11,15 @@ async function bootstrap() {
         .setTitle('TORCHLIFE API')
         .setDescription('API documentation for TORCHLIFE project')
         .setVersion('1.0')
-        .addBearerAuth()
+        .addBearerAuth(
+            {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+            },
+            'access-token',
+        )
+        .addTag('auth', 'Operations about auth')
         .build();
 
     const document = SwaggerModule.createDocument(app, config);

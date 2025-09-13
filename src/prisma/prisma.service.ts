@@ -1,5 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 const createPrismaExtended = (prisma: PrismaService) => {
@@ -18,15 +17,6 @@ const createPrismaExtended = (prisma: PrismaService) => {
                     }
 
                     return await query({ ...searchParams });
-                    // const start = Date.now();
-                    // const result = await query({ ...searchParams });
-                    // const duration = Date.now() - start;
-                    // console.log(
-                    // 	`Query: ${query} with Args: ${JSON.stringify(args)} Via ${model}.${operation} took ${duration}ms`,
-                    // );
-                    // console.log(`${model}.${operation} took ${duration}ms`);
-
-                    // return result;
                 },
             },
         },

@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Query } from '@nestjs/common';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PaginationOptions } from 'src/shared/utils/pagination/pagination';
+import { PaginationOptionsDto } from 'src/shared/utils/pagination/pagination-options.dto';
 
 @ApiBearerAuth('access-token')
 @Controller('campaign')
@@ -19,9 +21,9 @@ export class CampaignController {
 
     @Get('user')
     @ApiOperation({ summary: 'Get all campaigns created by the authenticated user' })
-    async findAllByUser(@Req() req: any) {
+    async findAllByUser(@Req() req: any, @Query() options: PaginationOptionsDto) {
         const userId = req.user.id;
-        return this.campaignService.findAllByUser(userId);
+        return this.campaignService.findAllByUser(userId, options);
     }
 
     @Get(':id')

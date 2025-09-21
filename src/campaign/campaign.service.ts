@@ -3,6 +3,7 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { USER_ROLES } from '@prisma/client';
+import { paginate, PaginationOptions } from 'src/shared/utils/pagination/pagination';
 
 @Injectable()
 export class CampaignService {
@@ -24,11 +25,30 @@ export class CampaignService {
         return this.prisma.campaign.create({ data });
     }
 
-    async findAllByUser(userId: string) {
-        return this.prisma.campaign.findMany({
-            where: { user_id: userId },
-            orderBy: { created_at: 'desc' },
-        });
+    async findAllByUser(userId: string, options: PaginationOptions) {
+        const settings = {
+            defaultLimit: 10, // campaigns per page
+            maxLimit: 50, // prevent huge requests
+        };
+
+        return paginate(
+            async () => {
+                const [campaigns, total] = await this.prisma.$transaction([
+                    this.prisma.campaign.findMany({
+                        where: { user_id: userId },
+                        orderBy: { created_at: 'desc' },
+                        skip: (options.page! - 1) * (options.limit ?? settings.defaultLimit),
+                        take: options.limit ?? settings.defaultLimit,
+                    }),
+                    this.prisma.campaign.count({
+                        where: { user_id: userId },
+                    }),
+                ]);
+                return [campaigns, total];
+            },
+            options,
+            settings,
+        );
     }
 
     async findOneById(id: string) {

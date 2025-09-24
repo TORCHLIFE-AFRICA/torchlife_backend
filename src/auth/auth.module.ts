@@ -6,11 +6,12 @@ import { JwtService } from '@nestjs/jwt';
 import { LocalStrategy } from './strategies/local.strategy';
 import { AuthService } from './auth.service';
 import { EmailTransportModule } from 'src/email-transport/email-transport.module';
+import { TokenService } from './token/token.service';
 
 @Module({
     controllers: [AuthController],
-    providers: [AuthService, LocalStrategy, UserService, JwtService],
-    imports: [UserModule, EmailTransportModule],
+    providers: [AuthService, LocalStrategy, UserService, JwtService, TokenService],
+    imports: [UserModule, EmailTransportModule, TokenService],
     exports: [AuthService],
 })
 export class AuthModule {}

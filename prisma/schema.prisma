@@ -28,26 +28,27 @@ enum USER_ROLES {
 }
 
 model User {
-  id           String           @id @default(uuid()) @db.Uuid()
-  first_name   String
-  last_name    String
-  password     String
-  isverified   Boolean
-  email        String           @unique()
-  phone_number String           @unique()
-  role         USER_ROLES?      @default(USER)
-  activities   USER_ACTIVITIES?
+  id                 String           @id @default(uuid()) @db.Uuid()
+  first_name         String
+  last_name          String
+  password           String
+  isverified         Boolean
+  email              String           @unique()
+  phone_number       String           @unique()
+  role               USER_ROLES?      @default(USER)
+  activities         USER_ACTIVITIES?
   //
-  created_at   DateTime         @default(now())
-  updated_at   DateTime         @updatedAt
-  deleted_at   DateTime?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+  deleted_at         DateTime?
   //
-  donations    Donation[]
-  payment      Payment[]
-  wallet       Wallet?
-  campaigns    Campaign[]
-  ratings      Rating[]
-  fileUploads  FileUpload[]
+  verified_campaigns Campaign[]       @relation(name: "verified_campaigns")
+  donations          Donation[]
+  payment            Payment[]
+  wallet             Wallet?
+  campaigns          Campaign[]       @relation(name: "campaign_owner")
+  ratings            Rating[]
+  fileUploads        FileUpload[]
 
   @@map("users")
 }
@@ -103,36 +104,51 @@ enum CAMPAIGN_STATUS {
   REJECTED
 }
 
+enum CAMPAIGN_PRIORITY {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Campaign {
-  id            String          @id @default(uuid()) @db.Uuid()
+  id            String            @id @default(uuid()) @db.Uuid()
   title         String
-  story         String
-  record        String
+  story         String?
+  location      String?
+  priority      CAMPAIGN_PRIORITY @default(LOW)
+  records       String[]
+  batch         Int               @default(1)
+  currency      String            @default("NGN")
   certified_pdf String
   image_url     String
-  status        CAMPAIGN_STATUS @default(PENDING)
+  status        CAMPAIGN_STATUS   @default(PENDING)
   deadline      DateTime
   target_amount Int
-  amount_raised Int
-  type          USER_ROLES      @default(USER)
-  //
-  proxyName     String?
-  proxyPhone    String?
-  proxyEmail    String?
-  proxyAddress  String?
-  proxyNote     String?
+  amount_raised Int               @default(0)
+  type          USER_ROLES        @default(USER)
 
-  //
+  // Verification organization (many campaigns can be verified by one org)
+  verified_by_id String? @db.Uuid()
+  verified_by    User?   @relation(name: "verified_campaigns", fields: [verified_by_id], references: [id])
+
+  // Optional proxy fields
+  proxyName    String?
+  proxyPhone   String?
+  proxyEmail   String?
+  proxyAddress String?
+  proxyNote    String?
+
+  // File uploads and related entities
   fileUploads FileUpload[]
-  //
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
-  deleted_at  DateTime?
-  //
-  user_id     String       @db.Uuid()
-  user        User         @relation(fields: [user_id], references: [id])
   donations   Donation[]
   ratings     Rating[]
+
+  user_id String @db.Uuid()
+  user    User   @relation(name: "campaign_owner", fields: [user_id], references: [id])
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
 
   @@map("campaigns")
 }

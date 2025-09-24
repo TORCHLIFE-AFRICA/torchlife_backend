@@ -5,6 +5,7 @@ import { User } from '@prisma/client';
 import { Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { AuthService } from './auth.service';
+import { async } from 'rxjs';
 
 @Controller('auth')
 export class AuthController implements IAuth {
@@ -25,6 +26,12 @@ export class AuthController implements IAuth {
     async signIn(@Body() signInDto: SignInDto, @Res() res: Response): Promise<Response> {
         return this.authService.signIn(signInDto, res);
     }
+
+    @Post('request')
+    async requestPasswordChange(@Body() identifier: string): Promise<{ msg: string }> {
+        await this.authService.requestPasswordChange(identifier);
+        return { msg: 'Password change request sent' };
+    }
     requestResetPassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
@@ -32,9 +39,6 @@ export class AuthController implements IAuth {
         throw new Error('Method not implemented.');
     }
     updatePassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
-    }
-    changePassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
 }

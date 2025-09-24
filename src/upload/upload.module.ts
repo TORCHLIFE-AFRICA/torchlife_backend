@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { UploadService } from './upload.service';
-import { UploadController } from './upload.controller';
+// import { UploadController } from './upload.controller';
 import { CloudinaryProvider } from './providers/cloudinary.provider';
 
 @Module({
-    controllers: [UploadController],
+    controllers: [],
     providers: [UploadService, CloudinaryProvider],
 })
 export class UploadModule {}

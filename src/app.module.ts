@@ -10,6 +10,8 @@ import { AuthMiddleware } from './middleware/auth.middleware';
 import { EmailTransportService } from './email-transport/email-transport.service';
 import { UploadModule } from './upload/upload.module';
 import { CampaignModule } from './campaign/campaign.module';
+import { WalletModule } from './wallet/wallet.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
     imports: [
@@ -18,8 +20,12 @@ import { CampaignModule } from './campaign/campaign.module';
         ConfigModule.forRoot({ isGlobal: true }),
         UserModule,
         PaymentsModule,
+        BullModule.forRoot({
+            redis: process.env.UPSTASH_REDIS_REST_URL,
+        }),
         UploadModule,
         CampaignModule,
+        WalletModule,
     ],
     controllers: [AppController],
     providers: [AppService, EmailTransportService],

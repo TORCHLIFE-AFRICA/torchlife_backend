@@ -161,6 +161,34 @@ export class CampaignService {
         );
     }
 
+    async verifyCampaign(campaignId: string, userId: string) {
+        // 1. Get the user
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // 2. Check if user is a "proxy"
+        if (user.role !== USER_ROLES.PROXY) {
+            throw new Error('Only proxy users can verify campaigns');
+        }
+
+        // 3. Update the campaign
+        const campaign = await this.prisma.campaign.update({
+            where: { id: campaignId },
+            data: {
+                verified_by: {
+                    connect: { id: user.id },
+                },
+            },
+        });
+
+        return campaign;
+    }
+
     findOne(id: number) {
         return `This action returns a #${id} campaign`;
     }

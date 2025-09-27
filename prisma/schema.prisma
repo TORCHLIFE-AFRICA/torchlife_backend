@@ -110,6 +110,11 @@ enum CAMPAIGN_PRIORITY {
   HIGH
 }
 
+enum CURRENCY {
+  NGN
+  USD
+}
+
 model Campaign {
   id            String            @id @default(uuid()) @db.Uuid()
   title         String
@@ -118,7 +123,7 @@ model Campaign {
   priority      CAMPAIGN_PRIORITY @default(LOW)
   records       String[]
   batch         Int               @default(1)
-  currency      String            @default("NGN")
+  currency      CURRENCY          @default(NGN)
   certified_pdf String
   image_url     String
   status        CAMPAIGN_STATUS   @default(PENDING)
@@ -128,8 +133,8 @@ model Campaign {
   type          USER_ROLES        @default(USER)
 
   // Verification organization (many campaigns can be verified by one org)
-  verified_by_id String? @db.Uuid()
-  verified_by    User?   @relation(name: "verified_campaigns", fields: [verified_by_id], references: [id])
+  verified_by_id String @db.Uuid()
+  verified_by    User   @relation(name: "verified_campaigns", fields: [verified_by_id], references: [id])
 
   // Optional proxy fields
   proxyName    String?
@@ -160,6 +165,13 @@ enum PAYMENT_STATUS {
   SUCCESS
 }
 
+enum PAYMENT_TYPE {
+  DEPOSIT
+  WITHDRAWAL
+  REFUND
+  ADJUSTMENT
+}
+
 model Payment {
   id            String         @id @default(uuid()) @db.Uuid()
   amount        Int
@@ -168,6 +180,8 @@ model Payment {
   custom_tx_ref String
   status        PAYMENT_STATUS
   comment       String?
+  type          PAYMENT_TYPE
+  currency      CURRENCY
   //
   created_at    DateTime       @default(now())
   updated_at    DateTime       @updatedAt
@@ -183,17 +197,57 @@ model Payment {
 }
 
 model Wallet {
-  id         String    @id @default(uuid()) @db.Uuid()
-  balance    Int
+  id                String              @id @default(uuid()) @db.Uuid()
+  balance           Int
+  currency          CURRENCY            @default(NGN)
   //
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+  deleted_at        DateTime?
   //
-  user_id    String    @unique @db.Uuid()
-  user       User      @relation(fields: [user_id], references: [id])
+  user_id           String              @unique @db.Uuid()
+  user              User                @relation(fields: [user_id], references: [id])
+  WalletTransaction WalletTransaction[]
 
   @@map("wallets")
+}
+
+model WalletTransaction {
+  id          String         @id @default(uuid()) @db.Uuid()
+  amount      Int
+  type        PAYMENT_TYPE
+  currency    CURRENCY
+  status      PAYMENT_STATUS @default(PENDING)
+  reference   String         @unique
+  description String?
+  meta        Json?
+
+  wallet_id String @db.Uuid()
+  wallet    Wallet @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([wallet_id])
+}
+
+enum WITHDRAWAL_STATUS {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+model WithdrawalRequest {
+  id           String            @id @default(uuid()) @db.Uuid()
+  user_id      String            @db.Uuid()
+  wallet_id    String            @db.Uuid()
+  to           String
+  amount       Int
+  status       WITHDRAWAL_STATUS
+  reason       String?
+  initiated_at DateTime          @default(now())
+  processed_at DateTime?
 }
 
 model Webhook {

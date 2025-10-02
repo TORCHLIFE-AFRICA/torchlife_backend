@@ -133,8 +133,9 @@ model Campaign {
   type          USER_ROLES        @default(USER)
 
   // Verification organization (many campaigns can be verified by one org)
-  verified_by_id String @db.Uuid()
-  verified_by    User   @relation(name: "verified_campaigns", fields: [verified_by_id], references: [id])
+  verified_by_id String  @db.Uuid()
+  verified_by    User    @relation(name: "verified_campaigns", fields: [verified_by_id], references: [id])
+  wallet         Wallet?
 
   // Optional proxy fields
   proxyName    String?
@@ -182,32 +183,49 @@ model Payment {
   comment       String?
   type          PAYMENT_TYPE
   currency      CURRENCY
-  //
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
-  deleted_at    DateTime?
-  //
-  donation_id   String         @db.Uuid()
-  donation      Donation       @relation(fields: [donation_id], references: [id])
-  user_id       String         @db.Uuid()
-  user          User           @relation(fields: [user_id], references: [id])
-  webhook       Webhook?
+  meta          Json?
+  provider      String?
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  donation_id String?   @db.Uuid()
+  donation    Donation? @relation(fields: [donation_id], references: [id])
+
+  user_id String? @db.Uuid()
+  user    User?   @relation(fields: [user_id], references: [id])
+
+  wallet_id String? @db.Uuid()
+  wallet    Wallet? @relation(fields: [wallet_id], references: [id]) // ✅ Correct one-to-many relation
+
+  webhook            Webhook?
+  walletTransactions WalletTransaction[]
+  withdrawalRequests WithdrawalRequest[]
 
   @@map("payments")
 }
 
+enum ACCOUNT_STATUS {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
 model Wallet {
-  id                String              @id @default(uuid()) @db.Uuid()
-  balance           Int
-  currency          CURRENCY            @default(NGN)
-  //
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
-  deleted_at        DateTime?
-  //
-  user_id           String              @unique @db.Uuid()
-  user              User                @relation(fields: [user_id], references: [id])
+  id             String         @id @default(uuid()) @db.Uuid()
+  balance        Int
+  currency       CURRENCY       @default(NGN)
+  account_status ACCOUNT_STATUS @default(ACTIVE)
+
+  user_id     String? @unique @db.Uuid()
+  campaign_id String? @unique @db.Uuid()
+
+  user     User?     @relation(fields: [user_id], references: [id])
+  campaign Campaign? @relation(fields: [campaign_id], references: [id])
+
   WalletTransaction WalletTransaction[]
+  payments          Payment[]
 
   @@map("wallets")
 }
@@ -224,6 +242,9 @@ model WalletTransaction {
 
   wallet_id String @db.Uuid()
   wallet    Wallet @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  payment_id String?  @db.Uuid()
+  payment    Payment? @relation(fields: [payment_id], references: [id])
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -242,7 +263,8 @@ model WithdrawalRequest {
   id           String            @id @default(uuid()) @db.Uuid()
   user_id      String            @db.Uuid()
   wallet_id    String            @db.Uuid()
-  to           String
+  payment_id   String?           @db.Uuid()
+  payment      Payment?          @relation(fields: [payment_id], references: [id])
   amount       Int
   status       WITHDRAWAL_STATUS
   reason       String?
@@ -253,13 +275,12 @@ model WithdrawalRequest {
 model Webhook {
   id         String    @id @default(uuid()) @db.Uuid()
   event      Json
-  //
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
-  //
-  payment_id String?   @unique() @db.Uuid()
-  user       Payment?  @relation(fields: [payment_id], references: [id])
+
+  payment_id String?  @unique @db.Uuid()
+  payment    Payment? @relation(fields: [payment_id], references: [id])
 
   @@map("webhooks")
 }

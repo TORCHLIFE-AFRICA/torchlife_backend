@@ -4,7 +4,8 @@ import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CAMPAIGN_STATUS, USER_ROLES } from '@prisma/client';
 import { paginate, PaginationOptions } from 'src/shared/utils/pagination/pagination';
-import { UploadService } from 'src/upload/upload.service';
+import { UploadService } from 'src/services/upload/upload.service';
+import { DbDataConstant } from 'src/domain/constants/db.constant';
 
 @Injectable()
 export class CampaignService {
@@ -33,9 +34,13 @@ export class CampaignService {
 
     async findAllByUser(userId: string, options: PaginationOptions) {
         const settings = {
-            defaultLimit: 10, // campaigns per page
-            maxLimit: 50, // prevent huge requests
+            defaultLimit: 10,
+            maxLimit: 50,
         };
+
+        const page = options.page ?? 1;
+        const limit = options.limit ?? settings.defaultLimit;
+        const skip = (page - 1) * limit;
 
         return paginate(
             async () => {
@@ -43,12 +48,37 @@ export class CampaignService {
                     this.prisma.campaign.findMany({
                         where: { user_id: userId },
                         orderBy: { created_at: 'desc' },
-                        skip: (options.page! - 1) * (options.limit ?? settings.defaultLimit),
-                        take: options.limit ?? settings.defaultLimit,
+                        skip,
+                        take: limit,
+                        select: DbDataConstant.campaignData,
                     }),
                     this.prisma.campaign.count({
                         where: { user_id: userId },
                     }),
+                ]);
+                return [campaigns, total];
+            },
+            options,
+            settings,
+        );
+    }
+
+    findAll(options: PaginationOptions = {}) {
+        const settings = {
+            defaultLimit: 10,
+            maxLimit: 50,
+        };
+
+        return paginate(
+            async (skip, limit) => {
+                const [campaigns, total] = await this.prisma.$transaction([
+                    this.prisma.campaign.findMany({
+                        orderBy: { created_at: 'desc' },
+                        skip,
+                        take: limit,
+                        select: DbDataConstant.campaignData,
+                    }),
+                    this.prisma.campaign.count(),
                 ]);
                 return [campaigns, total];
             },
@@ -72,28 +102,6 @@ export class CampaignService {
 
         if (!campaign) throw new NotFoundException(`Campaign with ID ${id} not found`);
         return campaign;
-    }
-    findAll(options: PaginationOptions = {}) {
-        const settings = {
-            defaultLimit: 10,
-            maxLimit: 50,
-        };
-
-        return paginate(
-            async (skip, limit) => {
-                const [campaigns, total] = await this.prisma.$transaction([
-                    this.prisma.campaign.findMany({
-                        orderBy: { created_at: 'desc' },
-                        skip,
-                        take: limit,
-                    }),
-                    this.prisma.campaign.count(),
-                ]);
-                return [campaigns, total];
-            },
-            options,
-            settings,
-        );
     }
 
     async update(user: { id: string; role: USER_ROLES }, campaignId: string, dto: UpdateCampaignDto) {

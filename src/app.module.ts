@@ -2,15 +2,15 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './services/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './user/user.module';
-import { PaymentsModule } from './payments/payments.module';
+import { UserModule } from './services/user/user.module';
+import { PaymentsModule } from './services/payments/payments.module';
 import { AuthMiddleware } from './middleware/auth.middleware';
-import { EmailTransportService } from './email-transport/email-transport.service';
-import { UploadModule } from './upload/upload.module';
-import { CampaignModule } from './campaign/campaign.module';
-import { WalletModule } from './wallet/wallet.module';
+import { EmailTransportService } from './services/email-transport/email-transport.service';
+import { UploadModule } from './services/upload/upload.module';
+import { CampaignModule } from './services/campaign/campaign.module';
+import { WalletModule } from './services/wallet/wallet.module';
 import { BullModule } from '@nestjs/bull';
 
 @Module({

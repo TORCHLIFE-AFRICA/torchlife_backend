@@ -1,17 +1,17 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
+import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
 import { User } from '@prisma/client';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
-import { TokenPayload } from 'src/shared/types/token-payload.types';
-import { IAuth } from 'src/domain/interface/auth.interface';
-import { EmailTransportService } from 'src/email-transport/email-transport.service';
+// import { IAuth } from '../domain/interface/auth.interface';
+import { EmailTransportService } from '../email-transport/email-transport.service';
 import { TokenService } from './token/token.service';
+import { TokenPayload } from 'src/shared/types/token-payload.types';
 
 @Injectable()
-export class AuthService implements IAuth {
+export class AuthService {
     constructor(
         private readonly configService: ConfigService,
         private readonly userService: UserService,

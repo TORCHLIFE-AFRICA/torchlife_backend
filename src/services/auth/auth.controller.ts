@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 // import { IAuth } from '../../auth/auth.interface';
-import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
+import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
 import { User } from '@prisma/client';
 import { Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';

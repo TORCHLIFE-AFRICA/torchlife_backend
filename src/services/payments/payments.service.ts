@@ -10,7 +10,7 @@ export class PaymentsService {
         @InjectQueue('payment') private paymentQueue: Queue,
     ) {}
 
-    // 1. USER WALLET TOP-UP (Inbound)
+    //  USER WALLET TOP-UP (Inbound)
     async initiateDeposit(userId: string, amount: number) {
         return this.prisma.$transaction(async (tx) => {
             const wallet = await tx.wallet.findUnique({ where: { user_id: userId } });
@@ -54,7 +54,7 @@ export class PaymentsService {
         });
     }
 
-    // 2. DONATION TO CAMPAIGN WALLET (move)
+    //  DONATION TO CAMPAIGN WALLET (move)
     async initiateDonation(userId: string, campaignId: string, amount: number, donation_id?: string) {
         const userWallet = await this.prisma.wallet.findUnique({ where: { user_id: userId } });
         const campaignWallet = await this.prisma.wallet.findUnique({ where: { campaign_id: campaignId } });
@@ -91,7 +91,7 @@ export class PaymentsService {
         return { message: 'Donation queued', paymentId: payment.id };
     }
 
-    // 3. HOSPITAL PAYOUT (Outbound)
+    // HOSPITAL PAYOUT (Outbound)
     async initiatePayout(campaignId: string, amount: number, hospitalAccount: any) {
         const campaignWallet = await this.prisma.wallet.findUnique({ where: { campaign_id: campaignId } });
         if (!campaignWallet) throw new NotFoundException('Campaign wallet not found');

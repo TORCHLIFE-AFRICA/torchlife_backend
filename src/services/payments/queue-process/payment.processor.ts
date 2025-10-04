@@ -1,7 +1,7 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PaymentGatewayResolver } from './payment.resolver';
+import { PaymentGatewayResolver } from './inbound-payment.resolver';
 import { PaymentProviderKey } from 'src/domain/constants/payment-provider';
 
 @Processor('payment')
@@ -16,17 +16,19 @@ export class PaymentsProcessor {
     async handleVerifyPayment(job: Job<{ paymentId: string; provider: PaymentProviderKey }>) {
         const payment = await this.prisma.payment.findUnique({ where: { id: job.data.paymentId } });
         if (!payment) return;
+        if (payment.status !== 'PENDING') return;
 
         // TODO: call external API (Flutterwave/Paystack)
         const paymentGateway = this.paymentGatewayResolver.resolve(job.data.provider);
-        const verificationResult = await paymentGateway.verifyPayment(job.data.paymentId);
-        const success = verificationResult.success; // mock result
+        const incomingPayment = await paymentGateway.verifyPayment(job.data.paymentId);
+        const success = incomingPayment.success;
+        if (!success) throw new Error('Payment verification failed');
 
         await this.prisma.$transaction(async (tx) => {
             if (success) {
                 await tx.wallet.update({
                     where: { id: payment.wallet_id! },
-                    data: { balance: { increment: payment.amount } },
+                    data: { balance: { increment: incomingPayment.amount } },
                 });
                 await tx.payment.update({
                     where: { id: payment.id },
@@ -41,14 +43,15 @@ export class PaymentsProcessor {
         });
     }
 
-    // Donation transfer
-    @Process('process-donation')
-    async handleDonation(job: Job<{ paymentId: string; fromWalletId: string; toWalletId: string }>) {
+    // Transfer from wallet
+    @Process('process-transfer')
+    async handleTransfer(job: Job<{ paymentId: string; fromWalletId: string; toWalletId: string }>) {
         const { paymentId, fromWalletId, toWalletId } = job.data;
 
         await this.prisma.$transaction(async (tx) => {
             const payment = await tx.payment.findUnique({ where: { id: paymentId } });
             if (!payment) return;
+            if (payment.status !== 'SUCCESS') return;
 
             const fromWallet = await tx.wallet.findUnique({ where: { id: fromWalletId } });
             if (!fromWallet || fromWallet.balance < payment.amount) throw new Error('Insufficient funds');

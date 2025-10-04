@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaymentGatewayService } from 'src/domain/interface/payment-provider.interface';
 
 @Injectable()
-export class PaystackService implements PaymentGatewayService {
+export class PaystackInboundService implements PaymentGatewayService {
     async initializePayment({ amount, tx_ref, currency, userId }) {
         // Call Paystack init endpoint
         return {

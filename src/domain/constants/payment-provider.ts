@@ -1,7 +1,9 @@
-import { PaystackService } from 'src/services/payments/provider/paystack.provider';
+import { PaystackInboundService } from 'src/services/payments/inbound-providers/paystack.provider';
+import { WalletPaymentGatewayService } from 'src/services/payments/inbound-providers/user-wallet.provider';
 
 export const PaymentProviders = {
-    paystack: PaystackService,
+    paystack: PaystackInboundService,
+    wallet: WalletPaymentGatewayService,
 } as const;
 
 export type PaymentProviderKey = keyof typeof PaymentProviders;

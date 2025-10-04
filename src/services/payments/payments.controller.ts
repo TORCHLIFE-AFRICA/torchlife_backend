@@ -1,13 +1,14 @@
 import { Controller, Post, Body, Param } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { PaymentProviderKey } from 'src/domain/constants/payment-provider';
 
 @Controller('payments')
 export class PaymentsController {
     constructor(private readonly paymentsService: PaymentsService) {}
 
     @Post('deposit')
-    deposit(@Body() body: { userId: string; amount: number }) {
-        return this.paymentsService.initiateDeposit(body.userId, body.amount);
+    deposit(@Body() body: { userId: string; amount: number; provider: PaymentProviderKey }) {
+        return this.paymentsService.initiateDeposit(body.userId, body.amount, body.provider);
     }
 
     @Post('donation')

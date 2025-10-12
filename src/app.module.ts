@@ -21,7 +21,10 @@ import { BullModule } from '@nestjs/bull';
         UserModule,
         PaymentsModule,
         BullModule.forRoot({
-            redis: process.env.UPSTASH_REDIS_REST_URL,
+            redis: {
+                host: process.env.REDIS_HOST || 'localhost',
+                port: Number(process.env.REDIS_PORT) || 6379,
+            },
         }),
         UploadModule,
         CampaignModule,

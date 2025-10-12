@@ -27,18 +27,17 @@ export class EmailTransportService {
     }
 
     async sendMail(sendEmailDto: SendEmailDto) {
-        const isDev = process.env.NODE_ENV !== 'production';
-
-        const templatePath = isDev
-            ? join(__dirname, '..', 'email-templates', 'welcome.html') // during dev
-            : join(__dirname, '..', '..', 'email-templates', sendEmailDto.templateName); // in dist
-        const templateContent = fs.readFileSync(templatePath, 'utf-8');
+        // const isDev = process.env.NODE_ENV !== 'production';
+        // const templatePath = isDev
+        //     ? join(__dirname, '..', 'email-templates', 'welcome.html') // during dev
+        //     : join(__dirname, '..', '..', 'email-templates', sendEmailDto.templateName); // in dist
+        // const templateContent = fs.readFileSync(templatePath, 'utf-8');
         try {
             const info = await this.transporter.sendMail({
                 from: this.configService.getOrThrow('EMAIL_SENDER'),
                 to: sendEmailDto.to,
                 subject: sendEmailDto.subject,
-                html: templateContent
+                html: sendEmailDto.content
                     .replace('{{content}}', sendEmailDto.content)
                     .replace('{{name}}', sendEmailDto.name),
             });

@@ -4,11 +4,18 @@ import { PaymentsService } from './payments.service';
 import { BullModule } from '@nestjs/bull';
 import { PaymentsProcessor } from './queue-process/payment.processor';
 import { PaymentGatewayResolver } from './queue-process/inbound-payment.resolver';
-import { PaystackService } from './inbound-providers/paystack.provider';
+import { PaystackInboundService } from './inbound-providers/paystack.provider';
+import { WalletPaymentGatewayService } from './inbound-providers/user-wallet.provider';
 
 @Module({
     imports: [BullModule.registerQueue({ name: 'payment' })],
-    providers: [PaymentsService, PaymentsProcessor, PaystackService],
+    providers: [
+        PaymentsService,
+        PaymentsProcessor,
+        PaystackInboundService,
+        PaymentGatewayResolver,
+        WalletPaymentGatewayService,
+    ],
     exports: [PaymentGatewayResolver],
     // controllers: [PaymentsController],
 })

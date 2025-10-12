@@ -1,6 +1,7 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bull';
+import { PaymentProviderKey } from 'src/domain/constants/payment-provider';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -11,7 +12,7 @@ export class PaymentsService {
     ) {}
 
     //  USER WALLET TOP-UP (Inbound)
-    async initiateDeposit(userId: string, amount: number) {
+    async initiateDeposit(userId: string, amount: number, provider: PaymentProviderKey) {
         return this.prisma.$transaction(async (tx) => {
             const wallet = await tx.wallet.findUnique({ where: { user_id: userId } });
             if (!wallet) throw new NotFoundException('User wallet not found');
@@ -27,6 +28,7 @@ export class PaymentsService {
                     currency: 'NGN',
                     user_id: userId,
                     wallet_id: wallet.id,
+                    provider: provider as string,
                 },
             });
 

@@ -16,10 +16,9 @@ export class PaymentsProcessor {
     async handleVerifyPayment(job: Job<{ paymentId: string; provider: PaymentProviderKey }>) {
         const payment = await this.prisma.payment.findUnique({ where: { id: job.data.paymentId } });
         if (!payment) return;
-        if (payment.status !== 'PENDING') return;
 
         // TODO: call external API (Flutterwave/Paystack)
-        const paymentGateway = this.paymentGatewayResolver.resolve(job.data.provider);
+        const paymentGateway = this.paymentGatewayResolver.resolve(job.data.provider as string);
         const incomingPayment = await paymentGateway.verifyPayment(job.data.paymentId);
         const success = incomingPayment.success;
         if (!success) throw new Error('Payment verification failed');

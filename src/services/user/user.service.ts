@@ -1,8 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class UserService {
@@ -10,33 +11,59 @@ export class UserService {
 
     // get user by email or id
     async getUser(identifier: string): Promise<User> {
+        const whereClause: Prisma.UserWhereInput[] = [];
+
+        if (isUUID(identifier)) {
+            whereClause.push({ id: identifier });
+        }
+
+        whereClause.push({ email: identifier });
+        whereClause.push({ phone_number: identifier });
+
         const user = await this.prismaDB.user.findFirst({
             where: {
-                OR: [{ email: identifier }, { id: identifier }, { phone_number: identifier }],
+                OR: whereClause,
             },
         });
+
         if (!user) {
             throw new NotFoundException('User not found');
         }
+
         return user;
+    }
+
+    async verifiedEmail(id: string) {
+        await this.prismaDB.user.update({
+            where: { id },
+            data: {
+                isverified: true,
+            },
+        });
+    }
+
+    async comparePasswords(plainPassword: string, hashedPassword: string): Promise<boolean> {
+        return bcrypt.compare(plainPassword, hashedPassword);
     }
 
     // create user
     async createUser(user: SignUpDto): Promise<Omit<User, 'password'>> {
         //verify if user already exists
-        const existing = await this.prismaDB.user.findUnique({
+        const hashedPassword = await this.hashPassword(user.password);
+        const existing = await this.prismaDB.user.findFirst({
             where: {
-                email: user.email,
+                OR: [{ email: user.email }, { phone_number: user.phone_number }],
             },
         });
+
         if (existing) {
-            throw new ConflictException('username already exists');
+            throw new ConflictException('Email or phone number already exists');
         }
 
         const newUser = await this.prismaDB.user.create({
             data: {
                 email: user.email,
-                password: user.password,
+                password: hashedPassword,
                 first_name: user.first_name,
                 last_name: user.last_name,
                 phone_number: user.phone_number || '',
@@ -50,7 +77,7 @@ export class UserService {
     //Update password
     async updatePassword(identifier: string, password: string): Promise<Omit<User, 'password'>> {
         try {
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await this.hashPassword(password);
             const user = await this.getUser(identifier);
 
             const updatedUser = await this.prismaDB.user.update({
@@ -84,5 +111,10 @@ export class UserService {
             const { password, ...result } = user;
             return result;
         });
+    }
+
+    async hashPassword(password: string): Promise<string> {
+        const salt = await bcrypt.genSalt();
+        return bcrypt.hash(password, salt);
     }
 }

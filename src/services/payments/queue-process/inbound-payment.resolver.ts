@@ -1,29 +1,44 @@
-// src/payments/providers/payment-gateway.resolver.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaystackInboundService } from '../inbound-providers/paystack.provider';
-import { PaymentProviderKey } from 'src/domain/constants/payment-provider';
+// src/services/payments/payment-gateway.resolver.ts
+import { Injectable, Inject, NotFoundException, forwardRef } from '@nestjs/common';
 import { PaymentGatewayService } from 'src/domain/interface/payment-provider.interface';
+import { PaymentProviderKey } from 'src/domain/constants/payment-provider';
+import { PaystackInboundService } from '../inbound-providers/paystack.provider';
 import { WalletPaymentGatewayService } from '../inbound-providers/user-wallet.provider';
 
 @Injectable()
 export class PaymentGatewayResolver {
-    private readonly providers: Record<PaymentProviderKey, PaymentGatewayService>;
+    private readonly providers: Record<string, PaymentGatewayService>;
 
     constructor(
         private readonly paystack: PaystackInboundService,
-        private readonly wallet: WalletPaymentGatewayService,
+        private readonly userWallet: WalletPaymentGatewayService,
     ) {
         this.providers = {
             paystack: this.paystack,
-            wallet: this.wallet,
+            user_wallet: this.userWallet,
         };
     }
 
-    resolve(provider: PaymentProviderKey): PaymentGatewayService {
-        const service = this.providers[provider];
+    resolve(providerKey: string): PaymentGatewayService {
+        const service = this.providers[providerKey];
         if (!service) {
-            throw new NotFoundException(`Unsupported payment provider: ${provider}`);
+            throw new NotFoundException(`Unsupported payment provider: ${providerKey}`);
         }
         return service;
+    }
+
+    resolveByCurrency(currency: string): PaymentGatewayService {
+        const map: Record<string, string> = {
+            NGN: 'paystack',
+            USD: 'flutterwave',
+            WALLET: 'user_wallet',
+        };
+
+        const providerKey = map[currency.toUpperCase()];
+        if (!providerKey) {
+            throw new NotFoundException(`No provider found for currency: ${currency}`);
+        }
+
+        return this.resolve(providerKey);
     }
 }

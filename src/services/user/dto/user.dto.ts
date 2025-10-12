@@ -36,8 +36,8 @@ export class UserDto {
     @IsNotEmpty()
     phone_number: string;
 
-    @ApiProperty({ example: [PROXY, USER] })
+    @ApiProperty({ example: 'USER' })
     @IsOptional()
-    @IsEnum([PROXY, USER])
+    @IsEnum(USER_ROLES)
     role: UserRole;
 }

@@ -18,6 +18,12 @@ export class WalletService {
         return { balance: w.balance, currency: w.currency };
     }
 
+    async findWalletById(walletId: string) {
+        const w = await this.prisma.wallet.findUnique({ where: { id: walletId } });
+        if (!w) throw new NotFoundException('Wallet not found');
+        return w;
+    }
+
     async creditWallet(creditWalletDto: WalletTransactionDto) {
         const { amount, currency, description, reference, meta, walletId } = creditWalletDto;
         // idempotent: ensure WalletTransaction.reference not exist

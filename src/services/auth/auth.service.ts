@@ -1,4 +1,10 @@
-import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+    HttpException,
+    Injectable,
+    InternalServerErrorException,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
 import { User } from '@prisma/client';
@@ -9,6 +15,10 @@ import { Response } from 'express';
 import { EmailTransportService } from '../email-transport/email-transport.service';
 import { TokenService } from './token/token.service';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
+import VerifyEmail from 'src/domain/email-templates/verify-email';
+import { render } from '@react-email/components';
+import { OtpTokenService } from './otp-token.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +27,7 @@ export class AuthService {
         private readonly userService: UserService,
         private readonly emailTransportService: EmailTransportService,
         private readonly tokenService: TokenService,
+        private readonly otpTokenService: OtpTokenService,
     ) {}
 
     //signup user
@@ -24,6 +35,7 @@ export class AuthService {
         //hashing password and setting it to as the new password
         const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
         signUpDto.password = hashedPassword;
+        signUpDto.email = signUpDto.email.toLowerCase();
 
         try {
             // saving the user in the database
@@ -51,13 +63,29 @@ export class AuthService {
                 path: '/auth/refresh',
             });
 
+            const otp = crypto.randomInt(100000, 999999);
+            const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            const hashedOtp = await this.userService.hashPassword(otp.toString());
+
+            this.otpTokenService.create({
+                token: hashedOtp,
+                userId: user.id,
+                expiryDate: otpExpiresAt,
+            });
+
+            const htmlContent = await render(
+                VerifyEmail({
+                    code: otp.toString(),
+                    firstName: user.first_name!,
+                }),
+            );
             this.emailTransportService
                 .sendMail({
                     to: user.email,
                     subject: 'Welcome to our service!',
-                    name: user.first_name,
-                    content: "Thanks for signing up! We're glad to have you.",
-                    templateName: 'welcome',
+                    name: `${user.first_name} ${user.last_name}`,
+                    content: htmlContent,
+                    templateName: 'verify-email',
                 })
                 .catch((error) => {
                     console.error('Failed to send welcome email:', error);
@@ -69,6 +97,11 @@ export class AuthService {
             return { data: result };
         } catch (error) {
             console.error('Failed to create user', error);
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
             throw new InternalServerErrorException('User creation failed.');
         }
     }
@@ -94,6 +127,7 @@ export class AuthService {
 
     //signin user
     async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
+        signInDto.identifier = signInDto.identifier.toLowerCase();
         try {
             //verifying and fetching the user, with Response.data
             const user = (await this.verifyUser(signInDto)).data;

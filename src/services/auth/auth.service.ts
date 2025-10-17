@@ -1,4 +1,5 @@
 import {
+    GoneException,
     HttpException,
     Injectable,
     InternalServerErrorException,
@@ -19,6 +20,8 @@ import VerifyEmail from 'src/domain/email-templates/verify-email';
 import { render } from '@react-email/components';
 import { OtpTokenService } from './otp-token.service';
 import * as crypto from 'crypto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { UserEntity } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -224,5 +227,32 @@ export class AuthService {
         } catch (error) {
             throw new Error('Method not implemented.');
         }
+    }
+
+    async verifyOtp(
+        verifyOtpDto: VerifyOtpDto,
+        forWhat: { email?: boolean; phone?: boolean } = { email: false, phone: false },
+    ): Promise<UserEntity> {
+        const token = await this.otpTokenService.findOne(verifyOtpDto.userId);
+
+        if (!token) {
+            throw new GoneException('OTP has already been used.');
+        }
+
+        const isCorrectOtp = await this.userService.comparePasswords(verifyOtpDto.otp.toString(), token.token);
+
+        if (!isCorrectOtp) {
+            throw new UnauthorizedException('Invalid OTP');
+        }
+
+        if (token.expiryDate < new Date()) {
+            throw new UnauthorizedException('OTP has expired');
+        }
+
+        await this.otpTokenService.delete(verifyOtpDto.userId);
+
+        if (forWhat.email) await this.userService.verifiedEmail(verifyOtpDto.userId);
+
+        return await this.userService.getUser(verifyOtpDto.userId);
     }
 }

@@ -29,14 +29,7 @@ function Footer() {
                 </tr>
                 <tr>
                     <td align="center">
-                        <div style={styles.text}>
-                            1st floor, Gods Heritage building, Adekunle Fajuyi Rd, mokola, Ibadan.
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td align="center">
-                        <div style={styles.text}>admin@torchlife.africa. +234 806 174 7003</div>
+                        <div style={styles.text}>admin@torchlife.africa. +234 </div>
                     </td>
                 </tr>
                 <tr style={styles.fullWidth}>

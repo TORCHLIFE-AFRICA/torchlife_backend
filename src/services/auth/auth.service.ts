@@ -22,6 +22,7 @@ import { OtpTokenService } from './otp-token.service';
 import * as crypto from 'crypto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { UserEntity } from '../user/entities/user.entity';
+import { TooManyRequestsException } from 'src/domain/exceptions/custom.exception';
 
 @Injectable()
 export class AuthService {
@@ -43,7 +44,6 @@ export class AuthService {
         try {
             // saving the user in the database
             const user = await this.userService.createUser(signUpDto);
-
             // setting the access token and expiresAt, from the userID
             const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
             const { token: accessToken, expiresAt: accessExpiresAt } =
@@ -85,7 +85,7 @@ export class AuthService {
             this.emailTransportService
                 .sendMail({
                     to: user.email,
-                    subject: 'Welcome to our service!',
+                    subject: 'Welcome to Torchlife!',
                     name: `${user.first_name} ${user.last_name}`,
                     content: htmlContent,
                     templateName: 'verify-email',
@@ -94,17 +94,14 @@ export class AuthService {
                     console.error('Failed to send welcome email:', error);
                     // Don't throw — we don't want to fail signup because of email
                 });
-
             //returning the user data without the id
             const { id, ...result } = user;
             return { data: result };
         } catch (error) {
             console.error('Failed to create user', error);
-
             if (error instanceof HttpException) {
                 throw error;
             }
-
             throw new InternalServerErrorException('User creation failed.');
         }
     }
@@ -112,7 +109,6 @@ export class AuthService {
     // verify user
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
         const { identifier, password } = signInDto;
-
         //fetching the user from the database
         const user = await this.userService.getUser(identifier);
         if (!user) {
@@ -169,6 +165,64 @@ export class AuthService {
             console.error('Failed to sign in user', error);
             throw new UnauthorizedException('Invalid credentials');
         }
+    }
+
+    async resendOtp(data: {
+        email?: string;
+        forWhat: { email?: boolean; phone?: boolean };
+        userId?: string;
+        phone?: string;
+    }) {
+        const user = data.email
+            ? await this.userService.getUser(data.email)
+            : await this.userService.getUser(data.userId!);
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const existingToken = await this.otpTokenService.findOne(user.id);
+        if (existingToken) {
+            const now = new Date();
+            const expiryDate = existingToken.expiryDate;
+            const diffMs = expiryDate.getTime() - now.getTime();
+            const remainingMinutes = Math.max(Math.ceil(diffMs / (1000 * 60)), 0);
+
+            if (existingToken.expiryDate > now) {
+                throw new TooManyRequestsException(
+                    `You have already requested a verification code please wait ${remainingMinutes} minutes`,
+                );
+            }
+        }
+
+        const otp = crypto.randomInt(100000, 999999);
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const hashedOtp = await this.userService.hashPassword(otp.toString());
+
+        this.otpTokenService.create({
+            token: hashedOtp,
+            userId: user.id,
+            expiryDate: otpExpiresAt,
+        });
+
+        if (data.forWhat.email) {
+            const htmlContent = await render(
+                VerifyEmail({
+                    code: otp.toString(),
+                    firstName: user.first_name!,
+                }),
+            );
+
+            this.emailTransportService.sendMail({
+                to: user.email,
+                subject: 'Welcome to Torchlife!',
+                name: `${user.first_name} ${user.last_name}`,
+                content: htmlContent,
+                templateName: 'verify-email',
+            });
+        }
+
+        // return { userId: user.id };
     }
 
     //reset password for signed in user

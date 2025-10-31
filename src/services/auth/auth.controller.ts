@@ -6,6 +6,9 @@ import { Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { AuthService } from './auth.service';
 import { async } from 'rxjs';
+import { ApiOperation } from '@nestjs/swagger';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
 @Controller('auth')
 export class AuthController implements IAuth {
@@ -22,6 +25,16 @@ export class AuthController implements IAuth {
 
         return user;
     }
+
+    @Post('resend-email-otp')
+    @ApiOperation({ summary: 'Resend email verification opt' })
+    async resendEmailOtp(@Body() forgotPasswordDto: ResendOtpDto) {
+        return this.authService.resendOtp({
+            email: forgotPasswordDto.email,
+            forWhat: { email: true },
+        });
+    }
+
     @Post('signin')
     async signIn(@Body() signInDto: SignInDto, @Res() res: Response): Promise<Response> {
         return this.authService.signIn(signInDto, res);
@@ -32,8 +45,11 @@ export class AuthController implements IAuth {
         await this.authService.requestPasswordChange(identifier);
         return { msg: 'Password change request sent' };
     }
-    requestResetPassword(): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
+
+    @Post('verify-email-otp')
+    @ApiOperation({ summary: 'Verify email otp' })
+    async verifyEmailOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+        return this.authService.verifyOtp(verifyOtpDto, { email: true });
     }
     forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');

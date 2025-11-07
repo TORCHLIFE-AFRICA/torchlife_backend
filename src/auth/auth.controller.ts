@@ -1,16 +1,15 @@
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
-// import { IAuth } from '../../auth/auth.interface';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
 import { User } from '@prisma/client';
 import { Response } from 'express';
-import { IAuth } from 'src/domain/interface/auth.interface';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
-export class AuthController implements IAuth {
-    constructor(private readonly authService: AuthService) {}
-    verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        throw new Error('Method not implemented.');
+// export class AuthController implements IAuth {
+export class AuthController {
+    constructor(private readonly authService: AuthService) { }
+    async verifyUser(signInDto: SignInDto): Promise<{ data: Omit<User, 'password'> }> {
+        return await this.authService.verifyUser(signInDto);
     }
     @Post('signup')
     async signUp(
@@ -21,20 +20,27 @@ export class AuthController implements IAuth {
 
         return user;
     }
+
+
     @Post('signin')
-    async signIn(@Body() signInDto: SignInDto, @Res() res: Response): Promise<Response> {
+    async signIn(
+        @Body() signInDto: SignInDto,
+        @Res() res: Response
+    ) {
         return this.authService.signIn(signInDto, res);
     }
-    requestResetPassword(): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
+
+    // requestResetPassword(): Promise<{ msg: string }> {
+    //     throw new Error('Method not implemented.');
+    // }
+
+    @Post('forget-password')
+    async forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto, @Res({ passthrough: true }) res: Response): Promise<{ msg: string }> {
+        return this.authService.forgetPassword(forgetPasswordDto)
     }
-    forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
-    }
-    updatePassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
-    }
-    changePassword(): Promise<{ msg: string }> {
-        throw new Error('Method not implemented.');
+
+    @Post('reset-password')
+    async updatePassword(@Body() resetPasswordDto: ResetPasswordDto, @Res({ passthrough: true }) res: Response): Promise<{ msg: string }> {
+        return this.authService.updatePassword(resetPasswordDto)
     }
 }

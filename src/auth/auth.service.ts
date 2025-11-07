@@ -9,6 +9,7 @@ import { Response } from 'express';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { EmailTransportService } from 'src/email-transport/email-transport.service';
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 @Injectable()
 export class AuthService implements IAuth {
@@ -17,6 +18,7 @@ export class AuthService implements IAuth {
         private readonly userService: UserService,
         private readonly jwtService: JwtService,
         private readonly emailTransportService: EmailTransportService,
+        private readonly prismaDB: PrismaService
     ) {}
 
     //signup user
@@ -66,7 +68,9 @@ export class AuthService implements IAuth {
 
     // verify user
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
+        
         const { identifier, password } = signInDto;
+        
         //fetching the user from the database
         const user = await this.userService.getUser(identifier);
         if (!user) {
@@ -85,6 +89,7 @@ export class AuthService implements IAuth {
     async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
         try {
             //verifying and fetching the user, with Response.data
+           
             const user = (await this.verifyUser(signInDto)).data;
             //assigning the token payload from the user ID
             const tokenPayload: TokenPayload = { id: user.id };
@@ -102,7 +107,7 @@ export class AuthService implements IAuth {
                 secure: this.configService.getOrThrow('NODE_ENV') === 'production',
             });
             //returning the access token
-            return res.json({ data: accessToken });
+            return res.status(200).json({ data: accessToken });
         } catch (error) {
             console.error('Failed to sign in user', error);
             throw new UnauthorizedException('Invalid credentials');
@@ -128,30 +133,30 @@ export class AuthService implements IAuth {
             //reset the password by updateing the user's password from the database
             await this.userService.updatePassword(resetPasswordDto.identifier, resetPasswordDto.newPassword);
             return { msg: 'Password reset successfully' };
-        } catch (error) {}
-
-        throw new Error('Method not implemented.');
+        } catch (error) {
+            console.error('Failed to update password', error);
+            throw new UnauthorizedException('Failed to update password');
+        }
     }
 
     async forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
         try {
-            const isUser = (
-                await this.verifyUser({
-                    identifier: forgetPasswordDto.identifier,
-                    password: forgetPasswordDto.newPassword,
-                })
-            ).data.id;
+
+            const isUser = await this.prismaDB.user.findFirst({
+                where: { email: forgetPasswordDto.identifier}
+            })
             if (!isUser) {
                 throw new UnauthorizedException('Invalid credentials');
             }
-            const updatedUser = await this.userService.updatePassword(
+            await this.userService.updatePassword(
                 forgetPasswordDto.identifier,
                 forgetPasswordDto.newPassword,
             );
             return { msg: 'Password reset successfully' };
-        } catch (error) {}
-
-        throw new Error('Method not implemented.');
+        } catch (error) {
+            console.error('Failed to reset password', error);
+            throw new UnauthorizedException('Failed to reset password');
+        }
     }
     changePassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');

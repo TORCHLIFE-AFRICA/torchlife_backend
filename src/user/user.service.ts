@@ -7,26 +7,35 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 @Injectable()
 export class UserService {
     constructor(private readonly prismaDB: PrismaService) {}
-
-    // get user by email or id
+    
     async getUser(identifier: string): Promise<User> {
-        const user = await this.prismaDB.user.findFirst({
-            where: {
-                OR: [{ email: identifier }, { id: identifier }, { phone_number: identifier }],
-            },
-        });
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-        return user;
-    }
+  console.log('🔎 Identifier received:', identifier);
+
+  const user = await this.prismaDB.user.findFirst({
+    where: {
+      OR: [
+        { email: identifier },
+        { phone_number: identifier },
+      ],
+    },
+  });
+
+  if (!user) {
+    const allUsers = await this.prismaDB.user.findMany();
+    console.log('📋 All users in DB:', allUsers);
+    throw new NotFoundException('User not found');
+  }
+
+  return user;
+}
+
 
     // create user
     async createUser(user: SignUpDto): Promise<Omit<User, 'password'>> {
         //verify if user already exists
         const existing = await this.prismaDB.user.findUnique({
-            where: {
-                email: user.email,
+            where: { 
+                email: user.email
             },
         });
         if (existing) {

@@ -11,6 +11,5 @@ export class UpdatePasswordDto {
 
     @IsString()
     @IsNotEmpty()
-    @IsStrongPassword()
     newPassword: string;
 }

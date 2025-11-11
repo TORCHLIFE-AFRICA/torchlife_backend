@@ -29,6 +29,7 @@ export class AuthService implements IAuth {
         // saving the user in the database
         try {
             const user = await this.userService.createUser(signUpDto);
+            
             // setting the access token and expiresAt, from the userID
             const tokenPayload: TokenPayload = { id: user.id };
             const accessToken = this.jwtService.sign(tokenPayload, {
@@ -37,6 +38,7 @@ export class AuthService implements IAuth {
             });
             const expiresInMs = Number(this.configService.getOrThrow('JWT_EXPIRATION'));
             const expiresAt = new Date(Date.now() + expiresInMs);
+
             //stores the cookie in the HTTP response
             response.cookie('accessToken', accessToken, {
                 httpOnly: true,
@@ -139,6 +141,7 @@ export class AuthService implements IAuth {
         }
     }
 
+
     async forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
         try {
 
@@ -148,6 +151,7 @@ export class AuthService implements IAuth {
             if (!isUser) {
                 throw new UnauthorizedException('Invalid credentials');
             }
+        
             await this.userService.updatePassword(
                 forgetPasswordDto.identifier,
                 forgetPasswordDto.newPassword,

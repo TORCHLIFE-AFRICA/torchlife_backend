@@ -30,8 +30,13 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Server is running on http://0.0.0.0:${port}`);
+  // const port = process.env.PORT || 3000;
+  // await app.listen(port, '0.0.0.0');
+  // console.log(`🚀 Server is running on http://0.0.0.0:${port}`);
+
+  app.enableCors();
+console.log('✅ App initialized. Listening soon...');
+await app.listen(process.env.PORT || 10000, '0.0.0.0');
+console.log('🚀 Server listening successfully.');
 }
 bootstrap();

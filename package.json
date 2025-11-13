@@ -7,7 +7,7 @@
     "license": "UNLICENSED",
     "scripts": {
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-        "start": "node --max-old-space-size=512 dist/main.js",
+        "start": "nest start",
         "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
         "start:prod": "node dist/main",
@@ -22,7 +22,7 @@
         "migrate:create": "prisma migrate dev --create-only",
         "migrate:load": "prisma migrate dev",
         "migrate:dev": "prisma migrate dev --name init",
-        "build": "nest build",
+        "build": "nest build && yarn copy:templates",
         "copy:templates": "copyfiles -f src/email-templates/**/* dist/"
     },
     "dependencies": {

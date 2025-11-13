@@ -7,8 +7,8 @@
     "license": "UNLICENSED",
     "scripts": {
         "copy:templates": "copyfiles -f src/email-templates/**/* dist/",
-        "build": "tsc -p tsconfig.build.json && yarn copy:templates",
-        "start:prod": "node --max-old-space-size=512 dist/main.js",
+        "build": "nest build && yarn run copy:templates",
+        "start:prod": "node dist/main.js",
         "start:dev": "nest start --watch",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start": "nest start",
@@ -53,7 +53,6 @@
     "devDependencies": {
         "@eslint/eslintrc": "^3.2.0",
         "@eslint/js": "^9.18.0",
-        "@nestjs/cli": "^11.0.10",
         "@nestjs/schematics": "^11.0.0",
         "@nestjs/testing": "^11.0.1",
         "@swc/cli": "^0.6.0",

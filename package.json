@@ -7,7 +7,7 @@
     "license": "UNLICENSED",
     "scripts": {
         "copy:templates": "copyfiles -f src/email-templates/**/* dist/",
-        "build": "npx nest build && yarn copy:templates",
+        "build": "tsc -p tsconfig.build.json && yarn copy:templates",
         "start:prod": "node --max-old-space-size=512 dist/main.js",
         "start:dev": "nest start --watch",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

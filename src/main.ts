@@ -35,8 +35,8 @@ async function bootstrap() {
   // console.log(`🚀 Server is running on http://0.0.0.0:${port}`);
 
   app.enableCors();
-console.log('✅ App initialized. Listening soon...');
-await app.listen(process.env.PORT || 10000, '0.0.0.0');
-console.log('🚀 Server listening successfully.');
+  console.log('✅ App initialized. Listening soon...');
+  await app.listen(process.env.PORT || 10000, '0.0.0.0');
+  console.log('🚀 Server listening successfully.');
 }
 bootstrap();

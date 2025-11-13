@@ -6,11 +6,13 @@
     "private": true,
     "license": "UNLICENSED",
     "scripts": {
+        "copy:templates": "copyfiles -f src/email-templates/**/* dist/",
+        "build": "nest build && yarn copy:templates",
+        "start:prod": "node --max-old-space-size=512 dist/main.js",
+        "start:dev": "nest start --watch",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start": "nest start",
-        "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
-        "start:prod": "node dist/main",
         "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
         "test": "jest",
         "test:watch": "jest --watch",
@@ -21,9 +23,7 @@
         "migrate:run": "prisma migrate deploy",
         "migrate:create": "prisma migrate dev --create-only",
         "migrate:load": "prisma migrate dev",
-        "migrate:dev": "prisma migrate dev --name init",
-        "build": "nest build && yarn copy:templates",
-        "copy:templates": "copyfiles -f src/email-templates/**/* dist/"
+        "migrate:dev": "prisma migrate dev --name init"
     },
     "dependencies": {
         "@nestjs/common": "^11.1.1",

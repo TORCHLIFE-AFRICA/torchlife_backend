@@ -2,11 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-    getHello() {
-        throw new NotFoundException();
+    async getHello() {
+        return { message: 'Hello world!, Welcome to Torchlife Backend' };
     }
 
-    getHealth(): { message: string; status: number } {
+    async getHealth() 
+      {
         return { message: 'Healthy', status: 200 };
     }
 }

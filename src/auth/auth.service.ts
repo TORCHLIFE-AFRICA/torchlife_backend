@@ -19,7 +19,7 @@ export class AuthService implements IAuth {
         private readonly jwtService: JwtService,
         private readonly emailTransportService: EmailTransportService,
         private readonly prismaDB: PrismaService
-    ) {}
+    ) { }
 
     //signup user
     async signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<User, 'password' | 'id'> }> {
@@ -29,7 +29,7 @@ export class AuthService implements IAuth {
         // saving the user in the database
         try {
             const user = await this.userService.createUser(signUpDto);
-            
+
             // setting the access token and expiresAt, from the userID
             const tokenPayload: TokenPayload = { id: user.id };
             const accessToken = this.jwtService.sign(tokenPayload, {
@@ -70,9 +70,9 @@ export class AuthService implements IAuth {
 
     // verify user
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        
+
         const { identifier, password } = signInDto;
-        
+
         //fetching the user from the database
         const user = await this.userService.getUser(identifier);
         if (!user) {
@@ -91,7 +91,7 @@ export class AuthService implements IAuth {
     async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
         try {
             //verifying and fetching the user, with Response.data
-           
+
             const user = (await this.verifyUser(signInDto)).data;
             //assigning the token payload from the user ID
             const tokenPayload: TokenPayload = { id: user.id };
@@ -146,12 +146,12 @@ export class AuthService implements IAuth {
         try {
 
             const isUser = await this.prismaDB.user.findFirst({
-                where: { email: forgetPasswordDto.identifier}
+                where: { email: forgetPasswordDto.identifier }
             })
             if (!isUser) {
                 throw new UnauthorizedException('Invalid credentials');
             }
-        
+
             await this.userService.updatePassword(
                 forgetPasswordDto.identifier,
                 forgetPasswordDto.newPassword,

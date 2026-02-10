@@ -30,10 +30,6 @@ export class AuthController {
         return this.authService.signIn(signInDto, res);
     }
 
-    // requestResetPassword(): Promise<{ msg: string }> {
-    //     throw new Error('Method not implemented.');
-    // }
-
     @Post('forget-password')
     async forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto, @Res({ passthrough: true }) res: Response): Promise<{ msg: string }> {
         return this.authService.forgetPassword(forgetPasswordDto)

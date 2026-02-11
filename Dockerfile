@@ -1,26 +1,23 @@
-# Use official Node.js 22 image as base
-FROM node:22-alpine
-
+# Base image — lightweight Node version
+FROM node:20-alpine
 
 # Set working directory inside the container
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy package.json and yarn.lock
+# Copy package and lock files first (for better layer caching)
 COPY package.json yarn.lock ./
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Install only production dependencies
+RUN yarn install --production
 
-
-# Copy the rest of the app's source code
+# Copy the rest of the app source code
 COPY . .
 
-# Build the app (for NestJS or TypeScript)
+# Build your NestJS project (compiles TypeScript to JavaScript)
 RUN yarn build
 
-# Expose the port your app runs on
+# Expose the port your app will listen on (matches compose port)
 EXPOSE 3000
 
-# Start the app in production mode
-CMD ["yarn", "start:dev"]
-
+# Default command to run your app
+CMD ["yarn", "start:prod"]

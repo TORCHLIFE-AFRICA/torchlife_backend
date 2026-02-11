@@ -37,6 +37,7 @@ model User {
   phone_number       String           @unique()
   role               USER_ROLES?      @default(USER)
   activities         USER_ACTIVITIES?
+  refreshToken String?
   //
   created_at         DateTime         @default(now())
   updated_at         DateTime         @updatedAt

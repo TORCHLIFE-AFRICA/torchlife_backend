@@ -1,0 +1,33 @@
+services:
+    - type: web
+      name: torchlife-backend
+      env: docker
+      plan: starter # can change to 'standard' or 'pro' later
+      autoDeploy: true
+      buildCommand: '' # not needed because Dockerfile handles it
+      startCommand: 'yarn start:prod'
+      envVars:
+          - key: DATABASE_URL
+            fromDatabase:
+                name: torchlife-db
+                property: connectionString
+          - key: REDIS_URL
+            fromService:
+                name: torchlife-redis
+                type: redis
+                property: connectionString
+          - key: NODE_ENV
+            value: production
+          - key: PORT
+            value: 3000
+          # Add any other environment variables you need (except secrets)
+
+databases:
+    - name: torchlife-db
+      plan: starter
+      databaseName: torchlife_main_db
+      user: torchlife_user
+
+redis:
+    - name: torchlife-redis
+      plan: starter

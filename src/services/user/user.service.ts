@@ -117,4 +117,11 @@ export class UserService {
         const salt = await bcrypt.genSalt();
         return bcrypt.hash(password, salt);
     }
+
+    async updateRefreshToken(userId: string, refreshToken: string | null): Promise<void> {
+        await this.prismaDB.user.update({
+            where: { id: userId },
+            data: { refreshToken },
+        });
+    }
 }

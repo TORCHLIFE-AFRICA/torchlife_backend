@@ -12,7 +12,6 @@ import { User } from '@prisma/client';
 import { UserService } from '../user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
-// import { IAuth } from '../domain/interface/auth.interface';
 import { EmailTransportService } from '../email-transport/email-transport.service';
 import { TokenService } from './token/token.service';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
@@ -34,24 +33,22 @@ export class AuthService {
         private readonly otpTokenService: OtpTokenService,
     ) {}
 
-    //signup user
+    // ---------- SIGN UP ----------
     async signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<User, 'password' | 'id'> }> {
-        //hashing password and setting it to as the new password
         const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
         signUpDto.password = hashedPassword;
         signUpDto.email = signUpDto.email.toLowerCase();
 
         try {
-            // saving the user in the database
             const user = await this.userService.createUser(signUpDto);
-            // setting the access token and expiresAt, from the userID
-            const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
-            const { token: accessToken, expiresAt: accessExpiresAt } =
-                this.tokenService.generateAccessToken(tokenPayload);
-            const { token: refreshToken, expiresAt: refreshExpiresAt } =
-                this.tokenService.generateRefreshToken(tokenPayload);
 
-            //stores the cookie in the HTTP response
+            const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
+            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(tokenPayload);
+            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(tokenPayload);
+
+            const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+            await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
+
             response.cookie('accessToken', accessToken, {
                 httpOnly: true,
                 expires: accessExpiresAt,
@@ -66,11 +63,12 @@ export class AuthService {
                 path: '/auth/refresh',
             });
 
+            // OTP
             const otp = crypto.randomInt(100000, 999999);
             const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
             const hashedOtp = await this.userService.hashPassword(otp.toString());
 
-            this.otpTokenService.create({
+            await this.otpTokenService.create({
                 token: hashedOtp,
                 userId: user.id,
                 expiryDate: otpExpiresAt,
@@ -82,65 +80,51 @@ export class AuthService {
                     firstName: user.first_name!,
                 }),
             );
-            this.emailTransportService
-                .sendMail({
-                    to: user.email,
-                    subject: 'Welcome to Torchlife!',
-                    name: `${user.first_name} ${user.last_name}`,
-                    content: htmlContent,
-                    templateName: 'verify-email',
-                })
-                .catch((error) => {
-                    console.error('Failed to send welcome email:', error);
-                    // Don't throw — we don't want to fail signup because of email
-                });
-            //returning the user data without the id
+
+            await this.emailTransportService.sendMail({
+                to: user.email,
+                subject: 'Welcome to Torchlife!',
+                name: `${user.first_name} ${user.last_name}`,
+                content: htmlContent,
+                templateName: 'verify-email',
+            });
+
             const { id, ...result } = user;
             return { data: result };
         } catch (error) {
             console.error('Failed to create user', error);
-            if (error instanceof HttpException) {
-                throw error;
-            }
+            if (error instanceof HttpException) throw error;
             throw new InternalServerErrorException('User creation failed.');
         }
     }
 
-    // verify user
+    // ---------- VERIFY USER ----------
     async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
         const { identifier, password } = signInDto;
-        //fetching the user from the database
-        const user = await this.userService.getUser(identifier);
-        if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
 
-        //comparing the password
+        const user = await this.userService.getUser(identifier);
+        if (!user) throw new UnauthorizedException('Invalid credentials');
+
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
+        if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
         return { data: user };
     }
 
-    //signin user
+    // ---------- SIGN IN ----------
     async signIn(signInDto: SignInDto, res: Response): Promise<Response> {
         signInDto.identifier = signInDto.identifier.toLowerCase();
+
         try {
-            //verifying and fetching the user, with Response.data
             const user = (await this.verifyUser(signInDto)).data;
 
-            //assigning the token payload from the user ID
             const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
+            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(tokenPayload);
+            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(tokenPayload);
 
-            //setting the access token and refresh token
-            const { token: accessToken, expiresAt: accessExpiresAt } =
-                this.tokenService.generateAccessToken(tokenPayload);
-            const { token: refreshToken, expiresAt: refreshExpiresAt } =
-                this.tokenService.generateRefreshToken(tokenPayload);
+            const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+            await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
 
-            //stores the cookie in the HTTP response
             res.cookie('accessToken', accessToken, {
                 httpOnly: true,
                 expires: accessExpiresAt,
@@ -155,18 +139,17 @@ export class AuthService {
                 path: '/auth/refresh',
             });
 
-            //returning the access token
             return res.json({
                 accessToken,
                 tokenType: 'Bearer',
                 expiresAt: accessExpiresAt,
             });
-        } catch (error) {
-            console.error('Failed to sign in user', error);
+        } catch {
             throw new UnauthorizedException('Invalid credentials');
         }
     }
 
+    // ---------- RESEND OTP ----------
     async resendOtp(data: {
         email?: string;
         forWhat: { email?: boolean; phone?: boolean };
@@ -177,21 +160,16 @@ export class AuthService {
             ? await this.userService.getUser(data.email)
             : await this.userService.getUser(data.userId!);
 
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
+        if (!user) throw new NotFoundException('User not found');
 
         const existingToken = await this.otpTokenService.findOne(user.id);
         if (existingToken) {
             const now = new Date();
-            const expiryDate = existingToken.expiryDate;
-            const diffMs = expiryDate.getTime() - now.getTime();
-            const remainingMinutes = Math.max(Math.ceil(diffMs / (1000 * 60)), 0);
 
             if (existingToken.expiryDate > now) {
-                throw new TooManyRequestsException(
-                    `You have already requested a verification code please wait ${remainingMinutes} minutes`,
-                );
+                const diffMs = existingToken.expiryDate.getTime() - now.getTime();
+                const remaining = Math.ceil(diffMs / (1000 * 60));
+                throw new TooManyRequestsException(`Wait ${remaining} minutes before requesting another code`);
             }
         }
 
@@ -199,7 +177,7 @@ export class AuthService {
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
         const hashedOtp = await this.userService.hashPassword(otp.toString());
 
-        this.otpTokenService.create({
+        await this.otpTokenService.create({
             token: hashedOtp,
             userId: user.id,
             expiryDate: otpExpiresAt,
@@ -213,7 +191,7 @@ export class AuthService {
                 }),
             );
 
-            this.emailTransportService.sendMail({
+            await this.emailTransportService.sendMail({
                 to: user.email,
                 subject: 'Welcome to Torchlife!',
                 name: `${user.first_name} ${user.last_name}`,
@@ -221,92 +199,116 @@ export class AuthService {
                 templateName: 'verify-email',
             });
         }
-
-        // return { userId: user.id };
     }
 
-    //reset password for signed in user
+    // ---------- RESET PASSWORD ----------
     async updatePassword(resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
-        try {
-            // verify user
-            const isUser = (
-                await this.verifyUser({
-                    identifier: resetPasswordDto.identifier,
-                    password: resetPasswordDto.oldPassword,
-                })
-            ).data.id;
+        const isUser = (
+            await this.verifyUser({
+                identifier: resetPasswordDto.identifier,
+                password: resetPasswordDto.oldPassword,
+            })
+        ).data;
 
-            //throw invalid credentiala for invalid user
-            if (!isUser) {
-                throw new UnauthorizedException('Invalid credentials');
-            }
+        if (!isUser) throw new UnauthorizedException('Invalid credentials');
 
-            //reset the password by updateing the user's password from the database
-            await this.userService.updatePassword(resetPasswordDto.identifier, resetPasswordDto.newPassword);
-            return { msg: 'Password reset successfully' };
-        } catch (error) {}
+        await this.userService.updatePassword(resetPasswordDto.identifier, resetPasswordDto.newPassword);
 
-        throw new Error('Method not implemented.');
+        return { msg: 'Password reset successfully' };
     }
 
-    async forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
-        try {
-            const updatedUser = await this.userService.updatePassword(
-                forgetPasswordDto.identifier,
-                forgetPasswordDto.newPassword,
-            );
-            return { msg: 'Password reset successfully' };
-        } catch (error) {}
-
-        throw new Error('Method not implemented.');
+    // ---------- FORGET PASSWORD ----------
+    async forgetPassword(dto: ForgetPasswordDto): Promise<{ msg: string }> {
+        await this.userService.updatePassword(dto.identifier, dto.newPassword);
+        return { msg: 'Password reset successfully' };
     }
 
+    // ---------- PASSWORD CHANGE REQUEST ----------
     async requestPasswordChange(identifier: string): Promise<{ msg: string }> {
-        try {
-            const user = await this.userService.getUser(identifier);
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
-            const resetPasswordURL = this.configService.getOrThrow('resetPasswordURL');
-            const token = this.tokenService.generateAccessToken({ id: user.id, role: user.role || 'USER' });
-            const resetURL = `${resetPasswordURL}?token=${token}`;
-            await this.emailTransportService.sendMail({
-                to: user.email,
-                subject: 'Password Reset Request',
-                name: user.first_name,
-                content: `Click the link to reset your password: ${resetURL}`,
-                templateName: 'passwordReset',
-            });
-            return { msg: 'Password change request sent' };
-        } catch (error) {
-            throw new Error('Method not implemented.');
-        }
+        const user = await this.userService.getUser(identifier);
+        if (!user) throw new NotFoundException('User not found');
+
+        const resetPasswordURL = this.configService.getOrThrow('resetPasswordURL');
+        const token = this.tokenService.generateAccessToken({ id: user.id, role: user.role || 'USER' });
+
+        const resetURL = `${resetPasswordURL}?token=${token}`;
+
+        await this.emailTransportService.sendMail({
+            to: user.email,
+            subject: 'Password Reset Request',
+            name: user.first_name,
+            content: `Click the link to reset your password: ${resetURL}`,
+            templateName: 'passwordReset',
+        });
+
+        return { msg: 'Password change request sent' };
     }
 
+    // ---------- VERIFY OTP ----------
     async verifyOtp(
-        verifyOtpDto: VerifyOtpDto,
+        dto: VerifyOtpDto,
         forWhat: { email?: boolean; phone?: boolean } = { email: false, phone: false },
     ): Promise<UserEntity> {
-        const token = await this.otpTokenService.findOne(verifyOtpDto.userId);
+        const token = await this.otpTokenService.findOne(dto.userId);
+        if (!token) throw new GoneException('OTP already used');
 
-        if (!token) {
-            throw new GoneException('OTP has already been used.');
-        }
+        const isCorrectOtp = await this.userService.comparePasswords(dto.otp.toString(), token.token);
+        if (!isCorrectOtp) throw new UnauthorizedException('Invalid OTP');
 
-        const isCorrectOtp = await this.userService.comparePasswords(verifyOtpDto.otp.toString(), token.token);
+        if (token.expiryDate < new Date()) throw new UnauthorizedException('OTP expired');
 
-        if (!isCorrectOtp) {
-            throw new UnauthorizedException('Invalid OTP');
-        }
+        await this.otpTokenService.delete(dto.userId);
 
-        if (token.expiryDate < new Date()) {
-            throw new UnauthorizedException('OTP has expired');
-        }
+        if (forWhat.email) await this.userService.verifiedEmail(dto.userId);
 
-        await this.otpTokenService.delete(verifyOtpDto.userId);
+        return await this.userService.getUser(dto.userId);
+    }
 
-        if (forWhat.email) await this.userService.verifiedEmail(verifyOtpDto.userId);
+    // ---------- VERIFY ACCESS TOKEN ----------
+    verifyAccessToken(token: string): TokenPayload {
+        return this.tokenService.verifyAccessToken(token);
+    }
 
-        return await this.userService.getUser(verifyOtpDto.userId);
+    // ---------- REFRESH TOKEN ----------
+    async refreshToken(response: Response): Promise<{ accessToken: string }> {
+        const refreshToken = response.req.cookies['refreshToken'];
+        if (!refreshToken) throw new UnauthorizedException('Refresh token not found');
+
+        const decoded = this.tokenService.verifyRefreshToken(refreshToken);
+        const user = await this.userService.getUser(decoded.id);
+
+        if (!user || !user.refreshToken) throw new UnauthorizedException('Invalid refresh token');
+
+        const match = await bcrypt.compare(refreshToken, user.refreshToken);
+        if (!match) throw new UnauthorizedException('Invalid refresh token');
+
+        const payload: TokenPayload = { id: user.id, role: user.role || 'USER' };
+
+        const { token: newAccessToken, expiresAt: newAccessExpiresAt } = this.tokenService.generateAccessToken(payload);
+        const { token: newRefreshToken, expiresAt: newRefreshExpiresAt } = this.tokenService.generateRefreshToken(payload);
+
+        const hashedNewRefresh = await bcrypt.hash(newRefreshToken, 10);
+        await this.userService.updateRefreshToken(user.id, hashedNewRefresh);
+
+        response.cookie('accessToken', newAccessToken, {
+            httpOnly: true,
+            expires: newAccessExpiresAt,
+            secure: this.configService.getOrThrow('NODE_ENV') === 'production',
+        });
+
+        response.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            expires: newRefreshExpiresAt,
+            secure: this.configService.getOrThrow('NODE_ENV') === 'production',
+            sameSite: 'strict',
+            path: '/auth/refresh',
+        });
+
+        return { accessToken: newAccessToken };
+    }
+
+    // ---------- LOGOUT ----------
+    async logout(userId: string): Promise<void> {
+        await this.userService.updateRefreshToken(userId, null);
     }
 }

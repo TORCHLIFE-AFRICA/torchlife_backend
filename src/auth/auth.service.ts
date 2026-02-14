@@ -3,13 +3,13 @@ import * as bcrypt from 'bcryptjs';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/auth/dto/auth.dto';
 import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from 'src/user/user.service';
+import { UserService } from 'src/services/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
 import { IAuth } from 'src/domain/interface/auth.interface';
-import { EmailTransportService } from 'src/email-transport/email-transport.service';
-import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { EmailTransportService } from 'src/services/email-transport/email-transport.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthService implements IAuth {

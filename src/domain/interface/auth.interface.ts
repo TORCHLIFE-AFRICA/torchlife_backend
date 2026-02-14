@@ -8,6 +8,6 @@ export interface IAuth {
     verifyUser(signInDto: SignInDto): Promise<{ data: User }>;
     forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }>;
     updatePassword(resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }>;
-    requestPasswordChange(identifier: string): Promise<{ msg: string }>;
+    // requestPasswordChange(identifier: string): Promise<{ msg: string }>;
     // changePassword(token: string, resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }>;
 }

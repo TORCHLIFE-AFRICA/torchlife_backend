@@ -1,39 +1,31 @@
 version: '3.9'
+
 services:
+    app:
+        build: .
+        command: yarn start:prod
+        env_file:
+            - .env
+        depends_on:
+            - postgres
+            - redis
+        ports:
+            - '3000:3000'
+        restart: always
+
+    postgres:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: torchlife_main_db
+        # Remove port mapping in production
+        # ports:
+        #   - "5432:5432"
+        restart: always
+
     redis:
         image: redis:7-alpine
-        container_name: torchlife_redis
+        # ports:
+        #   - "6379:6379"
         restart: always
-        ports:
-            - '6379:6379'
-        volumes:
-            - redis_data:/data
-
-volumes:
-    redis_data:
-
-        # postgres:
-        #     image: postgres:16
-        #     container_name: postgres_db
-        #     environment:
-        #         POSTGRES_USER: postgres
-        #         POSTGRES_PASSWORD: password
-        #         POSTGRES_DB: torchlife_main_db
-        #     ports:
-        #         - '5432:5432'
-        #     volumes:
-        #         - postgres_data:/var/lib/postgresql/data
-#     app:
-#         build: .
-#         container_name: nest-app
-#         command: npm run start:dev
-#         ports:
-#             - '3000:3000'
-#         environment:
-#             REDIS_HOST: redis
-#             REDIS_PORT: 6379
-#         depends_on:
-#             - redis
-
-# volumes:
-#     redis_data:

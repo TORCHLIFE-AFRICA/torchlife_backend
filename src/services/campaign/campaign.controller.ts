@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Query, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Query, HttpCode, ForbiddenException } from '@nestjs/common';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -58,6 +58,11 @@ export class CampaignController {
     @ApiResponse({ status: 404, description: 'Campaign not found' })
     update(@Req() req: TokenPayload, @Param('id') id: string, @Body() updateCampaignDto: UpdateCampaignDto) {
         const user = req;
+
+         if (!user.role) {
+    throw new ForbiddenException('User role missing');
+  }
+  
         return this.campaignService.update({ id: user.id, role: user.role }, id, updateCampaignDto);
     }
 
@@ -68,6 +73,10 @@ export class CampaignController {
     @ApiResponse({ status: 404, description: 'Campaign not found' })
     remove(@Req() req: TokenPayload, @Param('id') id: string) {
         const user = req;
+
+         if (!user.role) {
+    throw new ForbiddenException('User role missing');
+  }
         return this.campaignService.remove({ id: user.id, role: user.role }, id);
     }
 

@@ -6,4 +6,7 @@ export class UpdatePasswordDto {
 
     @IsString()
     newPassword: string;
+
+    @IsString()
+    oldPassword: string;
 }

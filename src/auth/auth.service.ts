@@ -5,7 +5,7 @@ import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/services/user/user.service';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { TokenPayload } from 'src/shared/types/token-payload.types';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { EmailTransportService } from 'src/services/email-transport/email-transport.service';
@@ -165,4 +165,16 @@ export class AuthService implements IAuth {
     changePassword(): Promise<{ msg: string }> {
         throw new Error('Method not implemented.');
     }
+
+    async requestPasswordChange(data: { identifier: string }): Promise<{ msg: string }> {
+    return { msg: 'Password change requested' };
+}
+
+async refreshToken(response: Response): Promise<{ accessToken: string }> {
+    return { accessToken: 'new-token' };
+}
+
+async logout(req: Request, res: Response): Promise<{ message: string }> {
+    return { message: 'Logged out successfully' };
+}
 }

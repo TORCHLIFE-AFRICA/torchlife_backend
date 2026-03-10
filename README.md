@@ -44,6 +44,10 @@ $ yarn run start:dev
 $ yarn run start:prod
 ```
 
+## Use Docker
+`git clone`
+`docker compose up --build`
+
 ## Run tests
 
 ```bash

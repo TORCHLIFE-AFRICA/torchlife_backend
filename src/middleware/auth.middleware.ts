@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
+import { parseUserRole } from 'src/shared/utils/parse-user-role';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
@@ -17,8 +18,17 @@ export class AuthMiddleware implements NestMiddleware {
         if (!token) throw new UnauthorizedException('Missing access token');
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'changeme') as { id: string };
-            req.user = { id: decoded.id };
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'changeme');
+            if (!decoded || typeof decoded !== 'object') throw new UnauthorizedException('Invalid token payload');
+
+            const payload = decoded as Record<string, unknown>;
+            const id =
+                (typeof payload.sub === 'string' && payload.sub) ||
+                (typeof payload.id === 'string' && payload.id) ||
+                null;
+            if (!id) throw new UnauthorizedException('Invalid token subject');
+
+            req.user = { id, role: parseUserRole(payload.role) };
             next();
         } catch {
             throw new UnauthorizedException('Token invalid or expired');

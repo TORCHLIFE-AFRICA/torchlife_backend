@@ -1,6 +1,9 @@
-import { CURRENCY } from '@prisma/client';
+export enum Currency {
+    NGN = 'NGN',
+    USD = 'USD',
+}
 
 export class CreateWalletDto {
     id: string;
-    currency: CURRENCY;
+    currency: Currency;
 }

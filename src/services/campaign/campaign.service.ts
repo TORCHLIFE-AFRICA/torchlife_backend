@@ -2,20 +2,22 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CAMPAIGN_STATUS, USER_ROLES } from '@prisma/client';
 import { paginate, PaginationOptions } from 'src/shared/utils/pagination/pagination';
 import { UploadService } from 'src/services/upload/upload.service';
 import { DbDataConstant } from 'src/domain/constants/db.constant';
+import { CampaignStatus } from 'src/domain/enums/campaign-status.enum';
+import { CampaignType } from './dto/create-campaign.dto';
+import { UserRole } from 'src/domain/enums/user-role.enum';
 
 @Injectable()
 export class CampaignService {
     constructor(
         private prisma: PrismaService,
         private uploadService: UploadService,
-    ) {}
+    ) { }
     async create(userId: string, dto: CreateCampaignDto, file?: Express.Multer.File) {
         // Optionally ensure required proxy fields (extra runtime guard)
-        if (dto.type === USER_ROLES.PROXY) {
+        if (dto.type === CampaignType.PROXY) {
             if (!dto.proxyName || !dto.proxyEmail || !dto.proxyPhone) {
                 throw new Error('Missing proxy fields for PROXY campaign');
             }
@@ -104,11 +106,11 @@ export class CampaignService {
         return campaign;
     }
 
-    async update(user: { id: string; role: USER_ROLES }, campaignId: string, dto: UpdateCampaignDto) {
+    async update(user: { id: string; role: UserRole }, campaignId: string, dto: UpdateCampaignDto) {
         const campaign = await this.findOneById(campaignId);
         if (!campaign) throw new NotFoundException();
 
-        if (campaign.user_id !== user.id && user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+        if (campaign.user_id !== user.id && user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
             throw new ForbiddenException('You are not authorized to update this campaign');
         }
 
@@ -118,11 +120,11 @@ export class CampaignService {
         });
     }
 
-    async remove(user: { id: string; role: USER_ROLES }, campaignId: string) {
+    async remove(user: { id: string; role: UserRole }, campaignId: string) {
         const campaign = await this.findOneById(campaignId);
         if (!campaign) throw new NotFoundException();
 
-        if (campaign.user_id !== user.id && user.role !== USER_ROLES.ADMIN) {
+        if (campaign.user_id !== user.id && user.role !== UserRole.ADMIN) {
             throw new ForbiddenException('You are not authorized to delete this campaign');
         }
 
@@ -138,12 +140,12 @@ export class CampaignService {
         return this.prisma.campaign.update({
             where: { id: campaignId },
             data: {
-                status: CAMPAIGN_STATUS.APPROVED,
+                status: CampaignStatus.APPROVED,
             },
         });
     }
 
-    async findAllByStatus(status: CAMPAIGN_STATUS, options: PaginationOptions) {
+    async findAllByStatus(status: CampaignStatus, options: PaginationOptions) {
         const settings = {
             defaultLimit: 10,
             maxLimit: 50,
@@ -180,7 +182,7 @@ export class CampaignService {
         }
 
         // 2. Check if user is a "proxy"
-        if (user.role !== USER_ROLES.PROXY) {
+        if (user.role !== UserRole.PROXY) {
             throw new Error('Only proxy users can verify campaigns');
         }
 

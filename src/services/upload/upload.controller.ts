@@ -3,6 +3,7 @@ import { UploadService } from 'src/services/upload/upload.service';
 import { CreateUploadDto } from './dto/create-upload.dto';
 import { UpdateUploadDto } from './dto/update-upload.dto';
 import { FileInterceptor } from '@nestjs/platform-express/multer/interceptors/file.interceptor';
+import { memoryStorage } from 'multer';
 
 @Controller('upload')
 export class UploadController {
@@ -38,7 +39,12 @@ export class UploadController {
   }
 
   @Post(':campaignId')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(
+      FileInterceptor('file', {
+        storage: memoryStorage(),
+        limits: { fileSize: 10 * 1024 * 1024 },
+      }),
+    )
     upload(
       @UploadedFile() file: Express.Multer.File,
       @Param('campaignId') campaignId: string,

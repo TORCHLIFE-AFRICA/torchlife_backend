@@ -10,12 +10,16 @@ import {
     Min,
     IsEnum,
 } from 'class-validator';
-import { USER_ROLES } from '@prisma/client';
+
+export enum CampaignType {
+    USER = 'USER',
+    PROXY = 'PROXY',
+}
 
 export class CreateCampaignDto {
-    @ApiProperty({ enum: USER_ROLES, enumName: 'CampaignType' })
-    @IsEnum(USER_ROLES)
-    type: USER_ROLES;
+    @ApiProperty({ enum: CampaignType, enumName: 'CampaignType' })
+    @IsEnum(CampaignType)
+    type: CampaignType;
 
     @ApiProperty()
     @IsString()
@@ -49,18 +53,18 @@ export class CreateCampaignDto {
     target_amount: number;
 
     @ApiProperty({ required: false })
-    @ValidateIf((o) => o.type === USER_ROLES.PROXY)
+    @ValidateIf((o) => o.type === CampaignType.PROXY)
     @IsString()
     @IsNotEmpty()
     proxyName: string;
 
     @ApiProperty({ required: false })
-    @ValidateIf((o) => o.type === USER_ROLES.PROXY)
+    @ValidateIf((o) => o.type === CampaignType.PROXY)
     @IsPhoneNumber('NG')
     proxyPhone: string;
 
     @ApiProperty({ required: false })
-    @ValidateIf((o) => o.type === USER_ROLES.PROXY)
+    @ValidateIf((o) => o.type === CampaignType.PROXY)
     @IsEmail()
     proxyEmail: string;
 }

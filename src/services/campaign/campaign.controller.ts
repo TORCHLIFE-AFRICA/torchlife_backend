@@ -1,31 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Query, HttpCode, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ForbiddenException, UseGuards } from '@nestjs/common';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PaginationOptionsDto } from 'src/shared/utils/pagination/pagination-options.dto';
-import { CAMPAIGN_STATUS } from '@prisma/client';
-import { TokenPayload } from 'src/shared/types/token-payload.types';
+import { AuthUser } from 'src/shared/types/token-payload.types';
+import { JwtAuthGuard } from 'src/shared/guard/jwt-auth.guard';
+import { CurrentUser } from 'src/shared/decorators/current-user';
+import { CampaignStatus } from 'src/domain/enums/campaign-status.enum';
 
 @ApiBearerAuth('access-token')
 @Controller('campaign')
 export class CampaignController {
-    constructor(private readonly campaignService: CampaignService) {}
+    constructor(private readonly campaignService: CampaignService) { }
 
     @Post('create-user')
     @ApiOperation({ summary: 'Create a new campaign' })
     @ApiResponse({ status: 201, description: 'Campaign successfully created' })
     @ApiResponse({ status: 400, description: 'Invalid data or user' })
-    async create(@Req() req: TokenPayload, @Body() dto: CreateCampaignDto) {
-        const userId = req.id;
+    @UseGuards(JwtAuthGuard)
+    async create(@CurrentUser() user: AuthUser, @Body() dto: CreateCampaignDto) {
+        const userId = user.id;
         return this.campaignService.create(userId, dto);
     }
 
     @Get('user')
     @ApiOperation({ summary: 'Get all campaigns created by the authenticated user' })
     @ApiResponse({ status: 200, description: 'List of user campaigns' })
-    async findAllByUser(@Req() req: TokenPayload, @Query() options: PaginationOptionsDto) {
-        const userId = req.id;
+    @UseGuards(JwtAuthGuard)
+    async findAllByUser(@CurrentUser() user: AuthUser, @Query() options: PaginationOptionsDto) {
+        const userId = user.id;
         return this.campaignService.findAllByUser(userId, options);
     }
 
@@ -40,7 +44,7 @@ export class CampaignController {
     @Get('status/:status')
     @ApiOperation({ summary: 'Get all campaigns by status' })
     @ApiResponse({ status: 200, description: 'List of campaigns by status' })
-    async findAllByStatus(@Param('status') status: CAMPAIGN_STATUS, @Query() options: PaginationOptionsDto) {
+    async findAllByStatus(@Param('status') status: CampaignStatus, @Query() options: PaginationOptionsDto) {
         return this.campaignService.findAllByStatus(status, options);
     }
 
@@ -56,13 +60,8 @@ export class CampaignController {
     @ApiResponse({ status: 200, description: 'Campaign successfully updated' })
     @ApiResponse({ status: 403, description: 'Forbidden: not the owner or admin' })
     @ApiResponse({ status: 404, description: 'Campaign not found' })
-    update(@Req() req: TokenPayload, @Param('id') id: string, @Body() updateCampaignDto: UpdateCampaignDto) {
-        const user = req;
-
-         if (!user.role) {
-    throw new ForbiddenException('User role missing');
-  }
-  
+    @UseGuards(JwtAuthGuard)
+    update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() updateCampaignDto: UpdateCampaignDto) {
         return this.campaignService.update({ id: user.id, role: user.role }, id, updateCampaignDto);
     }
 
@@ -71,12 +70,8 @@ export class CampaignController {
     @ApiResponse({ status: 200, description: 'Campaign successfully deleted' })
     @ApiResponse({ status: 403, description: 'Forbidden: not the owner or admin' })
     @ApiResponse({ status: 404, description: 'Campaign not found' })
-    remove(@Req() req: TokenPayload, @Param('id') id: string) {
-        const user = req;
-
-         if (!user.role) {
-    throw new ForbiddenException('User role missing');
-  }
+    @UseGuards(JwtAuthGuard)
+    remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
         return this.campaignService.remove({ id: user.id, role: user.role }, id);
     }
 
@@ -85,8 +80,8 @@ export class CampaignController {
     @ApiResponse({ status: 200, description: 'Campaign successfully verified' })
     @ApiResponse({ status: 403, description: 'Only PROXY users can verify campaigns' })
     @ApiResponse({ status: 404, description: 'Campaign not found' })
-    verifyCampaign(@Req() req: TokenPayload, @Param('id') id: string) {
-        const user = req;
+    @UseGuards(JwtAuthGuard)
+    verifyCampaign(@CurrentUser() user: AuthUser, @Param('id') id: string) {
         return this.campaignService.verifyCampaign(id, user.id);
     }
 }

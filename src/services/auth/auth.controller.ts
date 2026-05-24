@@ -1,16 +1,16 @@
 import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
-import { User } from '@prisma/client';
 import { Request, Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { AuthService } from './auth.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { DbUser } from 'src/shared/types/db-user.types';
 
 @Controller('auth')
 export class AuthController implements IAuth {
-    constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService) { }
 
     // -------------------------
     // REQUIRED BY IAuth
@@ -20,7 +20,7 @@ export class AuthController implements IAuth {
     async signUp(
         @Body() signUpDto: SignUpDto,
         @Res({ passthrough: true }) response: Response,
-    ): Promise<{ data: Omit<User, 'password' | 'id'> }> {
+    ): Promise<{ data: Omit<DbUser, 'password' | 'id'> }> {
         return this.authService.signUp(signUpDto, response);
     }
 
@@ -32,7 +32,7 @@ export class AuthController implements IAuth {
         return this.authService.signIn(signInDto, res);
     }
 
-    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
+    async verifyUser(signInDto: SignInDto): Promise<{ data: DbUser }> {
         return this.authService.verifyUser(signInDto);
     }
 

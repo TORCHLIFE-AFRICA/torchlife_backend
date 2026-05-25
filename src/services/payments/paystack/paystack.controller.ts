@@ -1,5 +1,5 @@
 import { Body, Controller, Headers, HttpCode, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { Request } from 'express';
 import * as crypto from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -8,8 +8,18 @@ import { CurrentUser } from 'src/shared/decorators/current-user';
 import { AuthUser } from 'src/shared/types/token-payload.types';
 import { InitializePaystackDonationDto } from './dto/initialize-paystack-donation.dto';
 import { PaystackInboundService } from '../inbound-providers/paystack.provider';
+import { ApiStandardResponse, ApiCommonErrors } from 'src/shared/decorators/swagger.decorator';
 
-@ApiTags('payments')
+class PaymentInitResponseDto {
+  // Define response
+}
+
+class AuthResponseDto {
+  // Shared empty response for success messages
+}
+
+@ApiTags('Payments')
+@ApiCommonErrors()
 @Controller('payments/paystack')
 export class PaystackPaymentsController {
   constructor(
@@ -17,13 +27,16 @@ export class PaystackPaymentsController {
     private readonly paystack: PaystackInboundService,
   ) { }
 
-  @Post('initialize')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Initialize a Paystack donation (MVP canonical)' })
-  async initializeDonation(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: InitializePaystackDonationDto,
-  ) {
+  @Post('initialize')
+  @ApiOperation({
+    summary: 'Initialize donation',
+    description:
+      'Creates a pending donation and payment record, then returns a Paystack checkout URL for the donor.',
+  })
+  @ApiStandardResponse(PaymentInitResponseDto, 201, 'Payment initialized successfully')
+  async initializeDonation(@CurrentUser() user: AuthUser, @Body() dto: InitializePaystackDonationDto) {
     const donor = await this.prisma.user.findUnique({ where: { id: user.id } });
     if (!donor) throw new UnauthorizedException('User not found');
 
@@ -93,7 +106,17 @@ export class PaystackPaymentsController {
 
   @Post('webhook')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Paystack webhook (signature verify + paystack verify + reconcile)' })
+  @ApiOperation({
+    summary: 'Paystack webhook listener',
+    description:
+      'Receives events from Paystack. Performs HMAC signature verification, fetches transaction status from Paystack API, and reconciles the database (Payment, Donation, and Campaign amounts).',
+  })
+  @ApiHeader({
+    name: 'x-paystack-signature',
+    description: 'HMAC SHA512 signature of the request body, signed with your Paystack secret key.',
+    required: true,
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Webhook processed')
   async webhook(
     @Req() req: Request & { rawBody?: Buffer },
     @Headers('x-paystack-signature') signature?: string,

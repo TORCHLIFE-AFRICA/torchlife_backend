@@ -9,38 +9,63 @@ export enum UserRole {
 }
 
 export class UserDto {
-    @ApiProperty({ example: 'user@example.com' })
+    @ApiProperty({
+        example: 'user@example.com',
+        description: 'The email address of the user',
+    })
     @IsEmail()
     @IsNotEmpty()
     email: string;
 
     @ApiProperty({
         example: 'StrongPassword123!',
-        description: 'Must contain upper, lower, number, symbol',
+        description: 'User password (must contain upper, lower, number, and symbol)',
+        minLength: 8,
     })
     @IsString()
     @IsNotEmpty()
     @IsStrongPassword()
     password: string;
 
-    @ApiProperty({ example: 'John' })
+    @ApiProperty({
+        example: 'John',
+        description: 'User first name',
+    })
     @IsString()
     @IsNotEmpty()
     first_name: string;
 
-    @ApiProperty({ example: 'Doe' })
+    @ApiProperty({
+        example: 'Doe',
+        description: 'User last name',
+    })
     @IsString()
     @IsNotEmpty()
     last_name: string;
 
-    @ApiPropertyOptional({ example: '+2348012345678' })
+    @ApiPropertyOptional({
+        example: '+2348012345678',
+        description: 'User phone number in international format',
+    })
     @IsOptional()
     @IsString()
     @IsNotEmpty()
     phone_number: string;
 
-    @ApiProperty({ example: 'USER' })
+    @ApiProperty({
+        enum: UserRole,
+        example: UserRole.USER,
+        description: 'Role assigned to the user',
+    })
     @IsOptional()
     @IsEnum(UserRole)
     role: UserRole;
+
+    @ApiPropertyOptional({
+        example: 'Nigeria',
+        description: 'Country of residence for the user',
+    })
+    @IsOptional()
+    @IsString()
+    countryOfResidence?: string;
 }

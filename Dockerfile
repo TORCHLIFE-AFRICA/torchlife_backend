@@ -13,6 +13,8 @@ RUN npm install
 # Copy the rest of the app source code
 COPY . .
 
+
+RUN npx prisma generate
 # Build your NestJS project (compiles TypeScript to JavaScript)
 RUN npm run build
 

@@ -1,42 +1,39 @@
 services:
-    app:
-        container_name: torchlife_app
-        build: .
-        command: sh -c "npx prisma generate && yarn start:dev"
-        env_file:
-            - .env
-        depends_on:
-            - postgres
-            - redis
-        volumes:
-            - .:/usr/src/app
-            - /usr/src/app/node_modules
-        ports:
-            - '1011:3000'
-        restart: always
+  app:
+    container_name: torchlife_app
+    build: .
+    command: sh -c "npx prisma generate && yarn start:dev"
+    env_file:
+      - .env.local
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "1011:8080"
+    volumes:
+      - .:/usr/src/app
+    restart: always
 
-    postgres:
-        image: postgres:16-alpine
-        container_name: torchlife_postgres
-        environment:
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: password
-            POSTGRES_DB: torchlife_main_db
-        ports:
-            - '5432:5432'
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-        restart: always
+  postgres:
+    image: postgres:16-alpine
+    container_name: torchlife_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: torchlife
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-    redis:
-        image: redis:7-alpine
-        container_name: torchlife_redis
-        ports:
-            - '6379:6379'
-        volumes:
-            - redis_data:/data
-        restart: always
+  redis:
+    image: redis:7-alpine
+    container_name: torchlife_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
-    postgres_data:
-    redis_data:
+  postgres_data:
+  redis_data:

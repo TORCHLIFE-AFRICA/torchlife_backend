@@ -1,37 +1,68 @@
+
 services:
-    app:
-        container_name: torchlife_app
-        build: .
-        command: sh -c "npx prisma generate && yarn start:prod"
-        env_file:
-            - .env
-        depends_on:
-            - postgres
-            - redis
-        ports:
-            - '1011:8080'
-        restart: always
+  app:
+    container_name: torchlife_app
+    build: .
+    command: sh -c "npx prisma generate && yarn start:prod"
+    env_file:
+      - .env
+    ports:
+      - "1011:8080"
+    restart: always
 
-    postgres:
-        image: postgres:16-alpine
-        container_name: torchlife_postgres
-        environment:
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: postgres
-            POSTGRES_DB: torchlife
-        ports:
-            - '5432:5432'
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-        restart: always
-
-    redis:
-        image: redis:7-alpine
-        container_name: torchlife_redis
-        volumes:
-            - redis_data:/data
-        restart: always
+  redis:
+    image: redis:7-alpine
+    container_name: torchlife_redis
+    volumes:
+      - redis_data:/data
+    restart: always
 
 volumes:
-    postgres_data:
-    redis_data:
+  redis_data:
+
+
+
+
+
+
+
+
+
+
+# services:
+#     app:
+#         container_name: torchlife_app
+#         build: .
+#         command: sh -c "npx prisma generate && yarn start:prod"
+#         env_file:
+#             - .env
+#         depends_on:
+#             - postgres
+#             - redis
+#         ports:
+#             - '1011:8080'
+#         restart: always
+
+#     postgres:
+#         image: postgres:16-alpine
+#         container_name: torchlife_postgres
+#         environment:
+#             POSTGRES_USER: postgres
+#             POSTGRES_PASSWORD: postgres
+#             POSTGRES_DB: torchlife
+#         ports:
+#             - '5432:5432'
+#         volumes:
+#             - postgres_data:/var/lib/postgresql/data
+#         restart: always
+
+#     redis:
+#         image: redis:7-alpine
+#         container_name: torchlife_redis
+#         volumes:
+#             - redis_data:/data
+#         restart: always
+
+# volumes:
+#     postgres_data:
+#     redis_data:

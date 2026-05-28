@@ -28,7 +28,7 @@ async function bootstrap() {
       'Professional production-grade API for TorchLife platform. Supports campaigns, secure payments via Paystack, medical document verification, and user authentication.',
     )
     .setVersion('1.0.0')
-    .setContact('TorchLife Engineering', 'https://torchlife.com', 'engineering@torchlife.com')
+    .setContact('TorchLife Engineering', 'https://torchlife.co', 'info@torchlife.com')
     .addBearerAuth(
       {
         type: 'http',
@@ -62,6 +62,9 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',
+    'https://torchlife.co',
+    'https://torchlife-backend-3lnl.onrender.com',
+
   ]);
 
   app.enableCors({

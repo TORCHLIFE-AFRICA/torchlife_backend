@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import 'reflect-metadata';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
     app.getHttpAdapter().getInstance().disable('x-powered-by');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, stopAtFirstError: true }));
     const config = new DocumentBuilder()
@@ -27,12 +30,15 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      forbidNonWhitelisted: true,
       stopAtFirstError: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
+
+  app.useStaticAssets(join(__dirname, '..', 'uploads'));
 
   app.getHttpAdapter().getInstance().disable('x-powered-by');
 

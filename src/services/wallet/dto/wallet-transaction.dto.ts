@@ -1,6 +1,6 @@
 import { IsString, IsUUID, IsNumber, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CURRENCY } from '@prisma/client';
+import { Currency } from './create-wallet.dto';
 
 export class WalletTransactionDto {
     @ApiProperty({
@@ -26,11 +26,11 @@ export class WalletTransactionDto {
 
     @ApiProperty({
         description: 'Currency of the transaction',
-        enum: CURRENCY,
-        example: CURRENCY.NGN,
+        enum: Currency,
+        example: Currency.NGN,
     })
-    @IsEnum(CURRENCY)
-    currency: CURRENCY;
+    @IsEnum(Currency)
+    currency: Currency;
 
     @ApiPropertyOptional({
         description: 'Optional description for the transaction',

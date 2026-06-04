@@ -1,34 +1,34 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { isUUID } from 'class-validator';
+import { DbUser } from 'src/shared/types/db-user.types';
 
 @Injectable()
 export class UserService {
-    constructor(private readonly prismaDB: PrismaService) {}
-    
-    async getUser(identifier: string): Promise<User> {
-  console.log('🔎 Identifier received:', identifier);
+    constructor(private readonly prismaDB: PrismaService) { }
 
-  const user = await this.prismaDB.user.findFirst({
-    where: {
-      OR: [
-        { email: identifier },
-        { phone_number: identifier },
-      ],
-    },
-  });
+    async getUser(identifier: string): Promise<DbUser> {
+        console.log('🔎 Identifier received:', identifier);
 
-  if (!user) {
-    const allUsers = await this.prismaDB.user.findMany();
-    console.log('📋 All users in DB:', allUsers);
-    throw new NotFoundException('User not found');
-  }
+        const user = await this.prismaDB.user.findFirst({
+            where: {
+                OR: [
+                    { email: identifier },
+                    { phone_number: identifier },
+                ],
+            },
+        });
 
-  return user;
-}
+        if (!user) {
+            const allUsers = await this.prismaDB.user.findMany();
+            console.log('📋 All users in DB:', allUsers);
+            throw new NotFoundException('User not found');
+        }
+
+        return user as unknown as DbUser;
+    }
 
 
     async verifiedEmail(id: string) {
@@ -45,7 +45,7 @@ export class UserService {
     }
 
     // create user
-    async createUser(user: SignUpDto): Promise<Omit<User, 'password'>> {
+    async createUser(user: SignUpDto): Promise<Omit<DbUser, 'password'>> {
         //verify if user already exists
         const hashedPassword = await this.hashPassword(user.password);
         const existing = await this.prismaDB.user.findFirst({
@@ -69,11 +69,11 @@ export class UserService {
             },
         });
         const { password, ...result } = newUser;
-        return result;
+        return result as unknown as Omit<DbUser, 'password'>;
     }
 
     //Update password
-    async updatePassword(identifier: string, password: string): Promise<Omit<User, 'password'>> {
+    async updatePassword(identifier: string, password: string): Promise<Omit<DbUser, 'password'>> {
         try {
             const hashedPassword = await this.hashPassword(password);
             const user = await this.getUser(identifier);
@@ -85,29 +85,29 @@ export class UserService {
                 },
             });
             const { password: _, ...userWithoutPassword } = updatedUser;
-            return userWithoutPassword;
+            return userWithoutPassword as unknown as Omit<DbUser, 'password'>;
         } catch (error) {
             throw new NotFoundException('User not found');
         }
     }
 
     // delete user
-    async deleteUser(id: string): Promise<Omit<User, 'password'>> {
+    async deleteUser(id: string): Promise<Omit<DbUser, 'password'>> {
         const deletedUser = await this.prismaDB.user.delete({
             where: {
                 id: id,
             },
         });
         const { password, ...result } = deletedUser;
-        return result;
+        return result as unknown as Omit<DbUser, 'password'>;
     }
 
     // get all users
-    async getAllUsers(): Promise<Omit<User, 'password'>[]> {
+    async getAllUsers(): Promise<Array<Omit<DbUser, 'password'>>> {
         const users = await this.prismaDB.user.findMany();
         return users.map((user) => {
             const { password, ...result } = user;
-            return result;
+            return result as unknown as Omit<DbUser, 'password'>;
         });
     }
 

@@ -1,6 +1,11 @@
-import { USER_ROLES } from '@prisma/client';
+import { UserRole } from 'src/domain/enums/user-role.enum';
 
-export interface TokenPayload {
+export interface AuthUser {
     id: string;
-    role?: USER_ROLES;
+    role: UserRole;
 }
+
+export type JwtPayload = {
+    sub: string;
+    role: UserRole;
+};

@@ -5,7 +5,7 @@ services:
       plan: starter # can change to 'standard' or 'pro' later
       autoDeploy: true
       buildCommand: '' # not needed because Dockerfile handles it
-      startCommand: 'yarn start:prod'
+      startCommand: 'npm run start:prod'
       envVars:
           - key: DATABASE_URL
             fromDatabase:

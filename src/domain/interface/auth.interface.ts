@@ -1,13 +1,13 @@
-import { User } from '@prisma/client';
 import { Request, Response } from 'express';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
+import { DbUser } from 'src/shared/types/db-user.types';
 
 export interface IAuth {
-    signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<User, 'password' | 'id'> }>;
+    signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<DbUser, 'password' | 'id'> }>;
 
     signIn(signInDto: SignInDto, res: Response): Promise<Response>;
 
-    verifyUser(signInDto: SignInDto): Promise<{ data: User }>;
+    verifyUser(signInDto: SignInDto): Promise<{ data: DbUser }>;
 
     forgetPassword(forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }>;
 

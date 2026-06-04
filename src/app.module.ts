@@ -10,7 +10,6 @@ import { EmailTransportService } from './services/email-transport/email-transpor
 import { UploadModule } from './services/upload/upload.module';
 import { CampaignModule } from './services/campaign/campaign.module';
 import { BullModule } from '@nestjs/bull';
-import { CampaignsModule } from './new/campaign/campaigns.module';
 
 @Module({
     imports: [
@@ -27,11 +26,6 @@ import { CampaignsModule } from './new/campaign/campaigns.module';
         }),
         UploadModule,
         CampaignModule,
-<<<<<<< HEAD
-        WalletModule,
-        CampaignsModule
-=======
->>>>>>> fc3dc30458f5664de1a02fa12a4fd04f3655fa86
     ],
     controllers: [AppController],
     providers: [AppService, EmailTransportService],

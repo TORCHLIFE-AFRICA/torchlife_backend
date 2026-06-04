@@ -1,25 +1,26 @@
-# Base image — lightweight Node version
+# Base image
 FROM node:20-alpine
 
-# Set working directory inside the container
+# Working directory
 WORKDIR /usr/src/app
 
-# Copy package file first (for better layer caching)
-COPY package.json ./
+# Copy dependency files first
+COPY package.json yarn.lock ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies using yarn
+RUN yarn install --frozen-lockfile
 
-# Copy the rest of the app source code
+# Copy source code
 COPY . .
 
-
+# Generate Prisma client
 RUN npx prisma generate
-# Build your NestJS project (compiles TypeScript to JavaScript)
-RUN npm run build
 
-# Expose the port your app will listen on (matches compose port)
+# Build NestJS app
+RUN yarn build
+
+# Expose port
 EXPOSE 3000
 
-# Default command to run your app
-CMD ["npm", "run", "start:prod"]
+# Run production server
+CMD ["yarn", "start:prod"]

@@ -2,30 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-<<<<<<< HEAD
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
-import 'reflect-metadata';
-
-async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-    app.getHttpAdapter().getInstance().disable('x-powered-by');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, stopAtFirstError: true }));
-    const config = new DocumentBuilder()
-        .setTitle('TORCHLIFE API')
-        .setDescription('API documentation for TORCHLIFE project')
-        .setVersion('1.0')
-        .addBearerAuth(
-            {
-                type: 'http',
-                scheme: 'bearer',
-                bearerFormat: 'JWT',
-            },
-            'access-token',
-        )
-        .addTag('auth', 'Operations about auth')
-        .build();
-=======
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -34,7 +10,6 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.use(cookieParser());
   app.getHttpAdapter().getInstance().disable('x-powered-by');
->>>>>>> fc3dc30458f5664de1a02fa12a4fd04f3655fa86
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -48,11 +23,6 @@ async function bootstrap() {
     }),
   );
 
-<<<<<<< HEAD
-  app.useStaticAssets(join(__dirname, '..', 'uploads'));
-
-  app.getHttpAdapter().getInstance().disable('x-powered-by');
-=======
   const config = new DocumentBuilder()
     .setTitle('TorchLife Backend API')
     .setDescription(
@@ -77,7 +47,6 @@ async function bootstrap() {
     .addTag('Uploads', 'Medical and proof document management via Cloudinary')
     .addTag('Admin', 'Internal administrative and verification workflows')
     .build();
->>>>>>> fc3dc30458f5664de1a02fa12a4fd04f3655fa86
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document, {

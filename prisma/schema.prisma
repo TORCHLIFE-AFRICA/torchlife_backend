@@ -72,7 +72,7 @@ model FileUpload {
   originalName String
   uploadedAt   DateTime @default(now())
   mimeType     String?
-  // ✅ Relations
+  // Relations
   userId       String?  @db.Uuid()
   user         User?    @relation(fields: [userId], references: [id])
 

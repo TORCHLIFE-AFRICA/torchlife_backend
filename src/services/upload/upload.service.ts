@@ -65,25 +65,24 @@ export class UploadService {
         try {
             uploadResult = await new Promise<UploadApiResponse>(
                 (resolve, reject) => {
-                    this.cloudinary.uploader
-                        .upload_stream(
-                            {
-                                folder: `torchlife/campaigns/${campaignId}`,
-                                resource_type: 'auto',
-                                overwrite: false,
-                            },
-                            (
-                                error: UploadApiErrorResponse,
-                                result: UploadApiResponse,
-                            ) => {
-                                if (error) {
-                                    return reject(error);
-                                }
+                    this.cloudinary.uploader.upload_stream(
+                        {
+                            folder: `torchlife/campaigns/${campaignId}`,
+                            resource_type: 'auto',
+                            overwrite: false,
+                        },
+                        (error, result) => {
+                            if (error) {
+                                return reject(error);
+                            }
 
-                                resolve(result);
-                            },
-                        )
-                        .end(file.buffer);
+                            if (!result) {
+                                return reject(new Error('No upload result returned'));
+                            }
+
+                            resolve(result);
+                        },
+                    ).end(file.buffer);
                 },
             );
         } catch (error) {

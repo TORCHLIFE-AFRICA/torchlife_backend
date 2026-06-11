@@ -72,7 +72,7 @@ model FileUpload {
   originalName String
   uploadedAt   DateTime @default(now())
   mimeType     String?
-  // ✅ Relations
+  // Relations
   userId       String?  @db.Uuid()
   user         User?    @relation(fields: [userId], references: [id])
 
@@ -310,4 +310,140 @@ model Rating {
   campaign    Campaign  @relation(fields: [campaign_id], references: [id])
 
   @@map("ratings")
+}
+
+
+//Azeez
+enum SubmitterType {
+  SELF
+  PROXY
+}
+
+model Campaigns {
+  id                String   @id @default(cuid())
+
+  title             String
+
+  category          CampaignCategory
+
+  story             String
+
+  amountNeeded      Float
+
+  amountRaised      Float @default(0)
+
+  currency          String
+
+  status            CampaignStatus
+
+  verified          Boolean @default(false)
+
+  submitterType     String
+
+  beneficiaryId     String
+
+  submitterId       String?
+
+  hospitalId        String
+
+  consentId         String
+
+  beneficiary       Beneficiary @relation(fields: [beneficiaryId], references: [id])
+
+  submitter         Submitter? @relation(fields: [submitterId], references: [id])
+
+  hospital          Hospital @relation(fields: [hospitalId], references: [id])
+
+  consent           Consent @relation(fields: [consentId], references: [id])
+
+  documents         CampaignDocument[]
+
+  updates           CampaignUpdate[]
+
+  createdAt         DateTime @default(now())
+
+  updatedAt         DateTime @updatedAt
+}
+
+
+model Submitter {
+  id            String   @id @default(cuid())
+  name          String
+  relationship  String?
+  phone         String
+  email         String
+
+  campaigns     Campaigns[]
+}
+
+model Beneficiary {
+  id                          String   @id @default(cuid())
+  name                        String
+  countryOfResidence          String
+  expectedDateOfDelivery      DateTime
+  medicalConditions           String[]
+
+  campaigns                   Campaigns[]
+}
+
+model Hospital {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  address   String
+
+  campaigns Campaigns[]
+}
+
+model Consent {
+  id         String   @id @default(cuid())
+  agreed     Boolean
+  agreedAt   DateTime
+
+  campaigns  Campaigns[]
+}
+
+model CampaignUpdate {
+  id          String   @id @default(cuid())
+  campaignId  String
+  message     String
+  visibility  String
+  createdBy   String
+  status      String   @default("PUBLISHED")
+  createdAt   DateTime @default(now())
+
+  campaign    Campaigns @relation(fields: [campaignId], references: [id])
+}
+
+model CampaignDocument {
+  id          String @id @default(cuid())
+
+  campaignId  String
+
+  fileName    String
+
+  fileUrl     String
+
+  mimeType    String
+
+  isHero      Boolean @default(false)
+
+  type        String
+
+  visibility  String
+
+  campaign    Campaigns @relation(fields: [campaignId], references: [id])
+}
+
+enum CampaignStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum CampaignCategory {
+  URGENT
+  MILESTONE
+  OFFSET
+  FIRSTFUND
 }

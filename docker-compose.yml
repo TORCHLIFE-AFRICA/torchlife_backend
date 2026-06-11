@@ -3,7 +3,7 @@ services:
   app:
     container_name: torchlife_app
     build: .
-    command: sh -c "npx prisma generate && yarn start:prod"
+    command: sh -c "npx prisma migrate deploy && npx prisma generate && yarn start:prod"
     env_file:
       - .env
     ports:

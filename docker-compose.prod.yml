@@ -1,0 +1,15 @@
+services:
+  app:
+    container_name: torchlife_app
+    build: .
+    command: sh -c "npx prisma generate && yarn start:prod"
+    env_file:
+      - .env
+    ports:
+      - "1011:8080"
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: torchlife_redis
+    restart: always

@@ -1,4 +1,5 @@
-import { USER_ACTIVITIES, USER_ROLES } from '@prisma/client';
+export type UserRole = 'ADMIN' | 'SUPER_ADMIN' | 'USER' | 'PROXY';
+export type UserActivity = 'DONOR' | 'RECEIVER';
 
 export class UserEntity {
     id: string;
@@ -8,8 +9,8 @@ export class UserEntity {
     isverified: boolean;
     email: string;
     phone_number: string;
-    role: USER_ROLES | null;
-    activities: USER_ACTIVITIES | null;
+    role: UserRole | null;
+    activities: UserActivity | null;
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;
@@ -21,8 +22,8 @@ export class UserEntity {
         isverified: boolean;
         email: string;
         phone_number: string;
-        role?: USER_ROLES | null;
-        activities?: USER_ACTIVITIES | null;
+        role?: UserRole | null;
+        activities?: UserActivity | null;
         created_at?: Date;
         updated_at?: Date;
         deleted_at?: Date | null;

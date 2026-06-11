@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
-import { User } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { SignInDto } from 'src/services/auth/dto/auth.dto';
 
@@ -12,7 +11,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
             usernameField: 'email',
         });
     }
-    async validate(email: string, password: string): Promise<User> {
+    async validate(email: string, password: string): Promise<any> {
         const signInDto: SignInDto = { identifier: email, password };
         const { data: user } = await this.authService.verifyUser(signInDto);
 

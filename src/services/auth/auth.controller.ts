@@ -1,98 +1,140 @@
 import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
-import { User } from '@prisma/client';
 import { Request, Response } from 'express';
 import { IAuth } from 'src/domain/interface/auth.interface';
 import { AuthService } from './auth.service';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { DbUser } from 'src/shared/types/db-user.types';
+import { ApiStandardResponse, ApiCommonErrors } from 'src/shared/decorators/swagger.decorator';
+import { UserDto } from '../user/dto/user.dto';
 
+class AuthResponseDto {
+  // Empty class for standard responses if no specific DTO exists
+}
+
+class TokenResponseDto {
+  accessToken: string;
+  tokenType: string;
+  expiresAt: string;
+}
+
+@ApiTags('Auth')
+@ApiCommonErrors()
 @Controller('auth')
 export class AuthController implements IAuth {
-    constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
-    // -------------------------
-    // REQUIRED BY IAuth
-    // -------------------------
+  @Post('signup')
+  @ApiOperation({
+    summary: 'Register a new user',
+    description: 'Creates a new user account and sends a verification email OTP.',
+  })
+  @ApiStandardResponse(UserDto, 201, 'User registered successfully')
+  async signUp(
+    @Body() signUpDto: SignUpDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ data: Omit<DbUser, 'password' | 'id'> }> {
+    return this.authService.signUp(signUpDto, response);
+  }
 
-    @Post('signup')
-    async signUp(
-        @Body() signUpDto: SignUpDto,
-        @Res({ passthrough: true }) response: Response,
-    ): Promise<{ data: Omit<User, 'password' | 'id'> }> {
-        return this.authService.signUp(signUpDto, response);
+  @Post('signin')
+  @ApiOperation({
+    summary: 'Login to account',
+    description:
+      'Authenticates user and returns access tokens. Also sets HttpOnly cookies for session management.',
+  })
+  @ApiStandardResponse(TokenResponseDto, 200, 'Login successful')
+  async signIn(@Body() signInDto: SignInDto, @Res() res: Response): Promise<Response> {
+    return this.authService.signIn(signInDto, res);
+  }
+
+  async verifyUser(signInDto: SignInDto): Promise<{ data: DbUser }> {
+    return this.authService.verifyUser(signInDto);
+  }
+
+  @Post('forget-password')
+  @ApiOperation({
+    summary: 'Initiate password recovery',
+    description: 'Sends a password reset link to the registered email.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Reset link sent')
+  async forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto): Promise<{ msg: string }> {
+    return this.authService.forgetPassword(forgetPasswordDto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Complete password recovery',
+    description: 'Updates the user password using a valid reset token.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Password updated successfully')
+  async updatePassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ msg: string }> {
+    return this.authService.updatePassword(resetPasswordDto);
+  }
+
+  @Post('request-password-change')
+  @ApiOperation({
+    summary: 'Request password change link',
+    description: 'Generates a secure link for an authenticated user to change their password.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Change link sent')
+  async requestPasswordChange(@Body() body: { identifier: string }): Promise<{ msg: string }> {
+    return this.authService.requestPasswordChange(body.identifier);
+  }
+
+  @Post('resend-email-otp')
+  @ApiOperation({
+    summary: 'Resend email verification OTP',
+    description: 'Triggers a new verification OTP to the user email if not already verified.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'OTP resent successfully')
+  async resendEmailOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtp({
+      email: dto.email,
+      forWhat: { email: true },
+    });
+  }
+
+  @Post('verify-email-otp')
+  @ApiOperation({
+    summary: 'Verify email OTP',
+    description: 'Verifies the account using the OTP code received via email.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Account verified successfully')
+  async verifyEmailOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOtp(verifyOtpDto, { email: true });
+  }
+
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Uses the refresh token cookie to generate a new access token.',
+  })
+  @ApiStandardResponse(TokenResponseDto, 200, 'Token refreshed')
+  async refreshToken(@Res({ passthrough: true }) response: Response) {
+    return this.authService.refreshToken(response);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('logout')
+  @ApiOperation({
+    summary: 'Logout user',
+    description: 'Clears authentication cookies and invalidates the session.',
+  })
+  @ApiStandardResponse(AuthResponseDto, 200, 'Logged out successfully')
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const accessToken = req.cookies['accessToken'];
+
+    if (accessToken) {
+      const decoded = this.authService.verifyAccessToken(accessToken);
+      await this.authService.logout(decoded.id);
     }
 
-    @Post('signin')
-    async signIn(
-        @Body() signInDto: SignInDto,
-        @Res() res: Response,
-    ): Promise<Response> {
-        return this.authService.signIn(signInDto, res);
-    }
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
 
-    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
-        return this.authService.verifyUser(signInDto);
-    }
-
-    @Post('forget-password')
-    async forgetPassword(
-        @Body() forgetPasswordDto: ForgetPasswordDto,
-    ): Promise<{ msg: string }> {
-        return this.authService.forgetPassword(forgetPasswordDto);
-    }
-
-    @Post('reset-password')
-    async updatePassword(
-        @Body() resetPasswordDto: ResetPasswordDto,
-    ): Promise<{ msg: string }> {
-        return this.authService.updatePassword(resetPasswordDto);
-    }
-
-    @Post('request-password-change')
-    async requestPasswordChange(
-        @Body() body: { identifier: string },
-    ): Promise<{ msg: string }> {
-        return this.authService.requestPasswordChange(body.identifier);
-    }
-
-    // -------------------------
-    // EXTRA ENDPOINTS
-    // -------------------------
-
-    @Post('resend-email-otp')
-    @ApiOperation({ summary: 'Resend email verification OTP' })
-    async resendEmailOtp(@Body() dto: ResendOtpDto) {
-        return this.authService.resendOtp({
-            email: dto.email,
-            forWhat: { email: true },
-        });
-    }
-
-    @Post('verify-email-otp')
-    @ApiOperation({ summary: 'Verify email OTP' })
-    async verifyEmailOtp(@Body() verifyOtpDto: VerifyOtpDto) {
-        return this.authService.verifyOtp(verifyOtpDto, { email: true });
-    }
-
-    @Post('refresh')
-    async refreshToken(@Res({ passthrough: true }) response: Response) {
-        return this.authService.refreshToken(response);
-    }
-
-    @Post('logout')
-    async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-        const accessToken = req.cookies['accessToken'];
-
-        if (accessToken) {
-            const decoded = this.authService.verifyAccessToken(accessToken);
-            await this.authService.logout(decoded.id);
-        }
-
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
-
-        return { message: 'Logged out successfully' };
-    }
+    return { message: 'Logged out successfully' };
+  }
 }

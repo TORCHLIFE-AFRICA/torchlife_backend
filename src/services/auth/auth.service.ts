@@ -8,20 +8,21 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { ForgetPasswordDto, ResetPasswordDto, SignInDto, SignUpDto } from 'src/services/auth/dto/auth.dto';
-import { User } from '@prisma/client';
 import { UserService } from '../user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { EmailTransportService } from '../email-transport/email-transport.service';
 import { TokenService } from './token/token.service';
-import { TokenPayload } from 'src/shared/types/token-payload.types';
+import { AuthUser } from 'src/shared/types/token-payload.types';
 import VerifyEmail from 'src/domain/email-templates/verify-email';
 import { render } from '@react-email/components';
 import { OtpTokenService } from './otp-token.service';
 import * as crypto from 'crypto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { UserEntity } from '../user/entities/user.entity';
 import { TooManyRequestsException } from 'src/domain/exceptions/custom.exception';
+import { UserRole } from 'src/domain/enums/user-role.enum';
+import { parseUserRole } from 'src/shared/utils/parse-user-role';
+import { DbUser } from 'src/shared/types/db-user.types';
 
 @Injectable()
 export class AuthService {
@@ -31,10 +32,13 @@ export class AuthService {
         private readonly emailTransportService: EmailTransportService,
         private readonly tokenService: TokenService,
         private readonly otpTokenService: OtpTokenService,
-    ) {}
+    ) { }
 
     // ---------- SIGN UP ----------
-    async signUp(signUpDto: SignUpDto, response: Response): Promise<{ data: Omit<User, 'password' | 'id'> }> {
+    async signUp(
+        signUpDto: SignUpDto,
+        response: Response,
+    ): Promise<{ data: Omit<DbUser, 'password' | 'id'> }> {
         const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
         signUpDto.password = hashedPassword;
         signUpDto.email = signUpDto.email.toLowerCase();
@@ -42,9 +46,12 @@ export class AuthService {
         try {
             const user = await this.userService.createUser(signUpDto);
 
-            const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
-            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(tokenPayload);
-            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(tokenPayload);
+            const authUser: AuthUser = {
+                id: user.id,
+                role: user.role ? parseUserRole(user.role) : UserRole.USER,
+            };
+            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(authUser);
+            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(authUser);
 
             const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
             await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
@@ -99,7 +106,7 @@ export class AuthService {
     }
 
     // ---------- VERIFY USER ----------
-    async verifyUser(signInDto: SignInDto): Promise<{ data: User }> {
+    async verifyUser(signInDto: SignInDto): Promise<{ data: DbUser }> {
         const { identifier, password } = signInDto;
 
         const user = await this.userService.getUser(identifier);
@@ -118,9 +125,12 @@ export class AuthService {
         try {
             const user = (await this.verifyUser(signInDto)).data;
 
-            const tokenPayload: TokenPayload = { id: user.id, role: user.role || 'USER' };
-            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(tokenPayload);
-            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(tokenPayload);
+            const authUser: AuthUser = {
+                id: user.id,
+                role: user.role ? parseUserRole(user.role) : UserRole.USER,
+            };
+            const { token: accessToken, expiresAt: accessExpiresAt } = this.tokenService.generateAccessToken(authUser);
+            const { token: refreshToken, expiresAt: refreshExpiresAt } = this.tokenService.generateRefreshToken(authUser);
 
             const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
             await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
@@ -229,7 +239,10 @@ export class AuthService {
         if (!user) throw new NotFoundException('User not found');
 
         const resetPasswordURL = this.configService.getOrThrow('resetPasswordURL');
-        const token = this.tokenService.generateAccessToken({ id: user.id, role: user.role || 'USER' });
+        const token = this.tokenService.generateAccessToken({
+            id: user.id,
+            role: user.role ? parseUserRole(user.role) : UserRole.USER,
+        });
 
         const resetURL = `${resetPasswordURL}?token=${token}`;
 
@@ -248,7 +261,7 @@ export class AuthService {
     async verifyOtp(
         dto: VerifyOtpDto,
         forWhat: { email?: boolean; phone?: boolean } = { email: false, phone: false },
-    ): Promise<UserEntity> {
+    ): Promise<DbUser> {
         const token = await this.otpTokenService.findOne(dto.userId);
         if (!token) throw new GoneException('OTP already used');
 
@@ -265,7 +278,7 @@ export class AuthService {
     }
 
     // ---------- VERIFY ACCESS TOKEN ----------
-    verifyAccessToken(token: string): TokenPayload {
+    verifyAccessToken(token: string): AuthUser {
         return this.tokenService.verifyAccessToken(token);
     }
 
@@ -282,7 +295,10 @@ export class AuthService {
         const match = await bcrypt.compare(refreshToken, user.refreshToken);
         if (!match) throw new UnauthorizedException('Invalid refresh token');
 
-        const payload: TokenPayload = { id: user.id, role: user.role || 'USER' };
+        const payload: AuthUser = {
+            id: user.id,
+            role: user.role ? parseUserRole(user.role) : UserRole.USER,
+        };
 
         const { token: newAccessToken, expiresAt: newAccessExpiresAt } = this.tokenService.generateAccessToken(payload);
         const { token: newRefreshToken, expiresAt: newRefreshExpiresAt } = this.tokenService.generateRefreshToken(payload);

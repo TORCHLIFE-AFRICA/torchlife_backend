@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { TokenPayload } from 'src/shared/types/token-payload.types';
+import { AuthUser, JwtPayload } from 'src/shared/types/token-payload.types';
+import { parseUserRole } from 'src/shared/utils/parse-user-role';
 
 @Injectable()
 export class TokenService {
@@ -10,8 +11,9 @@ export class TokenService {
         private readonly configService: ConfigService,
     ) {}
 
-    generateAccessToken(payload: TokenPayload) {
+    generateAccessToken(user: AuthUser) {
         const expiresIn = this.configService.getOrThrow('JWT_EXPIRATION');
+        const payload: JwtPayload = { sub: user.id, role: user.role };
         const token = this.jwtService.sign(payload, {
             secret: this.configService.getOrThrow('JWT_SECRET'),
             expiresIn: `${expiresIn}ms`,
@@ -22,8 +24,9 @@ export class TokenService {
         };
     }
 
-    generateRefreshToken(payload: TokenPayload) {
+    generateRefreshToken(user: AuthUser) {
         const expiresIn = this.configService.getOrThrow('JWT_REFRESH_EXPIRATION');
+        const payload: JwtPayload = { sub: user.id, role: user.role };
         const token = this.jwtService.sign(payload, {
             secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
             expiresIn,
@@ -34,15 +37,17 @@ export class TokenService {
         };
     }
 
-    verifyRefreshToken(token: string): TokenPayload {
-        return this.jwtService.verify(token, {
+    verifyRefreshToken(token: string): AuthUser {
+        const payload = this.jwtService.verify<JwtPayload>(token, {
             secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
         });
+        return { id: payload.sub, role: parseUserRole(payload.role) };
     }
 
-    verifyAccessToken(token: string): TokenPayload {
-        return this.jwtService.verify(token, {
+    verifyAccessToken(token: string): AuthUser {
+        const payload = this.jwtService.verify<JwtPayload>(token, {
             secret: this.configService.getOrThrow('JWT_SECRET'),
         });
+        return { id: payload.sub, role: parseUserRole(payload.role) };
     }
 }

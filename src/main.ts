@@ -59,19 +59,41 @@ async function bootstrap() {
   });
 
   const allowedOrigins = new Set<string>([
-    ...(process.env.CORS_PROD ? [process.env.CORS_PROD] : []),
+    ...((process.env.CORS_PROD || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)),
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',
+    'http://localhost:1011',
+    'http://127.0.0.1:1011',
     'https://torchlife.co',
     'https://torchlife-backend-3lnl.onrender.com',
-
   ]);
 
+  const isAllowedOrigin = (origin: string) => {
+    if (allowedOrigins.has(origin)) return true;
+
+    try {
+      const { protocol, hostname } = new URL(origin);
+      const isHttpOrigin = protocol === 'http:' || protocol === 'https:';
+      const isTorchlifeDomain =
+        hostname === 'torchlife.co' || hostname.endsWith('.torchlife.co');
+
+      return isHttpOrigin && isTorchlifeDomain;
+    } catch {
+      return false;
+    }
+  };
+
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.has(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,

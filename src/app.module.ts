@@ -10,6 +10,7 @@ import { EmailTransportService } from './services/email-transport/email-transpor
 import { UploadModule } from './services/upload/upload.module';
 import { CampaignModule } from './services/campaign/campaign.module';
 import { BullModule } from '@nestjs/bull';
+import { RedisHealthService } from './health/redis-health.service';
 
 @Module({
     imports: [
@@ -28,6 +29,6 @@ import { BullModule } from '@nestjs/bull';
         CampaignModule,
     ],
     controllers: [AppController],
-    providers: [AppService, EmailTransportService],
+    providers: [AppService, EmailTransportService, RedisHealthService],
 })
 export class AppModule {}
